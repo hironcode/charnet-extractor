@@ -59,6 +59,8 @@ class CharacterIdentification:
         gender options: MALE, FEMALE, UNKNOWN
         """
 
+        gender_undefined = [name for name in self.chars.keys()]
+
         # identification by titles
         female_titles = ["mrs.", "mrs", "miss.", "miss", "mis.", "mis"]
         male_titles = ["mr.", "mr"]
@@ -70,16 +72,33 @@ class CharacterIdentification:
                 self.chars[name.text][0] = "FEMALE"
             elif title.text.lower() in male_titles:
                 self.chars[name.text][0] = "MALE"
+            gender_undefined.remove(name.text)
+        if len(gender_undefined) == 0:
+            return self.chars
+
+        # identificaiton by name
+        print(gender_undefined)
+        male_names, female_names = formatting.get_namelists()
+        for name in gender_undefined:
+            print(name)
+            if name in male_names:
+                self.chars[name][0] = "MALE"
+                gender_undefined.remove(name)
+            elif name in female_names:
+                self.chars[name][0] = "FEMALE"
+                gender_undefined.remove(name)
             else:
-                self.chars[name.text][0] = "UNKNOWN"
+                pass
+        if len(gender_undefined) == 0:
+            return self.chars
 
+        return self.chars
 
-
-
-
-
-
-        # for name, info in self.chars.item():
+        # identification by pronouns
+        for name in gender_undefined:
+            spans = self.chars[name][2]
+            for span in spans:
+                pass
 
     def _match_gender_title(self):
         # (1) honorific matcher
@@ -102,3 +121,5 @@ class CharacterIdentification:
             title_name.add((self.doc[match[1]], self.doc[match[1]+1:match[2]]))
         return title_name
 
+    def _find_pronoun(self, token_idx):
+        mentions = []

@@ -3,13 +3,9 @@ import spacy
 import formatting
 from character_identification import CharacterIdentification
 
-texts = formatting.format()
-# for text in texts.values():
-#     ci = CharacterIdentification(text)
-#     ci.detect_characters()
-#     print(ci.chars)
+texts = formatting.format(["test.txt"])
 
-ci = CharacterIdentification(texts["totally_test.txt"])
+ci = CharacterIdentification(texts["test.txt"])
 ci.detect_characters()
-ci.annotate_gender()
-print(ci.chars)
+result = ci.annotate_gender()
+print(result)
