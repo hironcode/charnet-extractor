@@ -23,7 +23,7 @@ from spacy.matcher import Matcher
 from collections import defaultdict
 
 # import local files
-import formatting
+from src.data import make_dataset
 
 
 class CharacterIdentification:
@@ -52,8 +52,8 @@ class CharacterIdentification:
     def annotate_gender(self):
         """
         (2) automatically anotate a gender to each entity based on:
-            (a) titles such as Mr., Mrs., or Lord etc...
-            (b) lists of male first names and female first names
+            (a) lists of male first names and female first names
+            (b) titles such as Mr., Mrs., or Lord etc...
             (c) detecting pronouns such as him, her, his, her, himself, and herself etc...
 
         gender options: MALE, FEMALE, UNKNOWN
@@ -73,13 +73,14 @@ class CharacterIdentification:
             elif title.text.lower() in male_titles:
                 self.chars[name.text][0] = "MALE"
             gender_undefined.remove(name.text)
+        # return complete character dict if gender undefined is finished
         if len(gender_undefined) == 0:
             return self.chars
 
         # identificaiton by name
-        print(gender_undefined)
-        male_names, female_names = formatting.get_namelists()
-        for name in gender_undefined:
+        male_names, female_names = make_dataset.get_namelists()
+        temp = gender_undefined.copy()
+        for name in temp:
             print(name)
             if name in male_names:
                 self.chars[name][0] = "MALE"
@@ -89,16 +90,14 @@ class CharacterIdentification:
                 gender_undefined.remove(name)
             else:
                 pass
+        # return complete character dict if gender undefined is finished
         if len(gender_undefined) == 0:
             return self.chars
 
-        return self.chars
-
         # identification by pronouns
-        for name in gender_undefined:
-            spans = self.chars[name][2]
-            for span in spans:
-                pass
+        # for name in gender_undefined:
+        #     spans = self.chars[name][2]
+
 
     def _match_gender_title(self):
         # (1) honorific matcher
@@ -121,5 +120,12 @@ class CharacterIdentification:
             title_name.add((self.doc[match[1]], self.doc[match[1]+1:match[2]]))
         return title_name
 
-    def _find_pronoun(self, token_idx):
+    def _find_pronoun(self, token_idxes):
         mentions = []
+        i = 0
+        j = 0
+        sents_num = 0
+        while True:
+            token_idx = token_idxes[i]
+            sent = list(self.doc.sents)[j]
+            sents_num += len(list(sent))

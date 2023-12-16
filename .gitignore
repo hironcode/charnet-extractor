@@ -20,6 +20,6 @@ _notes
 
 #other files#
 ############
-txt_files/
-test.py
-main.ipynb
+/data/
+/notebooks/
+src/models/test.py
