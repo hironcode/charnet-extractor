@@ -4,25 +4,24 @@ import os
 def format_llm_ss(file:list="all"):
     texts = {}
 
-    dir_path = "../../data/raw/llm_ss"
+    dir_path = "../data/raw/llm_ss"
 
     if file == "all":
         titles = [
             f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))
         ]
     else:
-        titles = [file]
+        titles = file
 
     # signs to remove and alternative string to be replaced to
     signs = {
         "\n": " ",
         "\t": ""
     }
-
-    current_directory = "../../data/raw/llm_ss/"
+    current_directory = "../data/raw/llm_ss/"
 
     for title in titles:
-        path = current_directory + title
+        path = os.path.join(current_directory, title)
         with open(path, 'r') as f:
             textlines = f.readlines()
 
@@ -42,14 +41,14 @@ def format_llm_ss(file:list="all"):
 def format_human_ss(file:list="all"):
     texts = {}
 
-    dir_path = "../../data/external/human_ss"
+    dir_path = "../data/external/human_ss"
 
     if file == "all":
         titles = [
             f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))
         ]
     else:
-        titles = [file]
+        titles = file
 
     # signs to remove and alternative string to be replaced to
     signs = {
@@ -57,7 +56,7 @@ def format_human_ss(file:list="all"):
         "\t": ""
     }
 
-    current_directory = "../../data/external/human_ss/"
+    current_directory = "../data/external/human_ss/"
 
     for title in titles:
         path = current_directory + title
@@ -80,7 +79,7 @@ def format_human_ss(file:list="all"):
 
 def get_namelists():
 
-    male_path = "./src/name/male_name.txt"
+    male_path = "../data/external/name_list/male_name.txt"
     with open(male_path, 'r') as f:
         male_lines = f.readlines()
     # list of names begins in the line 8 in both the text files
@@ -88,7 +87,7 @@ def get_namelists():
     # put the list in a set to do hash search in the future
     male_names = set(male_lines)
 
-    female_path = "./src/name/female_name.txt"
+    female_path = "../data/external/name_list/female_name.txt"
     with open(female_path, 'r') as f:
         female_lines = f.readlines()
     # list of names begins in the line 8 in both the text files
