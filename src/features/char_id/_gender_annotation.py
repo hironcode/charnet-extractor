@@ -3,6 +3,7 @@
 from collections import defaultdict
 import spacy
 from spacy.matcher import Matcher
+from copy import deepcopy
 
 # import local files
 from src.data import make_dataset
@@ -19,23 +20,26 @@ class GenderAnnotation:
 
     def _annotate_gender_by_titiles(self):
         # identification by titles
-        female_titles = ["mrs.", "mrs", "miss.", "miss", "mis.", "mis"]
-        male_titles = ["mr.", "mr"]
+        female_titles, male_titles = make_dataset.get_titles()
+
         name_genders = {}
         for name in list(self.chars.keys()):
             name_genders[name] = []
 
-        title_name = self._match_gender_title()
+        title_name = self._match_gender_title(male_titles, female_titles)
         for title, name in title_name:
+            title = title.text
             # if the name is not in the default dict, skip the process
             if name.text not in self.chars.keys():
                 continue
 
-            if title.text.lower() in female_titles:
+            # remove .
+            if "." in title:
+                title = title.replace(".", "")
+            if title in female_titles:
                 name_genders[name.text].append("FEMALE")
-            elif title.text.lower() in male_titles:
+            elif title in male_titles:
                 name_genders[name.text].append("MALE")
-
         # re-assign the most frequent gender to each person
         for name, gender in name_genders.items():
             size = len(gender)
@@ -50,7 +54,7 @@ class GenderAnnotation:
               f"{name_genders}")
         return name_genders
 
-    def _match_gender_title(self):
+    def _match_gender_title(self, male_titles, female_titles):
         # (1) honorific matcher
 
         # use REGEX experession
@@ -58,13 +62,20 @@ class GenderAnnotation:
         #   s{0,2} means the s can appear 0 through 2 times
         #   .? means the period can appear 0 or 1 time
         # with the REGEX expression, we can cover Mr., Mrs., Miss., and Mis., with/without a following period
+        titles = male_titles.union(female_titles)
+        normal_expression = ""
+        for title in titles:
+            normal_expression += f"{title}\.?|"
+        normal_expression = f"({normal_expression[:-1]})"
+        # "(M[ri]s{0,2}\.? | sir\. | sord\. | lady\.)"
+
         pattern = [
-            {"TEXT": {"REGEX": "M[ri]s{0,2}\.?"}},
+            {"TEXT": {"REGEX": normal_expression}},
             {"POS": "PROPN", "OP": "+"}
         ]
 
         matcher = Matcher(self.nlp.vocab)
-        matcher.add("TITLE", [pattern])
+        matcher.add("TITLE", [pattern], greedy="LONGEST")
         matches = matcher(self.doc)
         title_name = list()
         for match in matches:
@@ -73,14 +84,15 @@ class GenderAnnotation:
 
     def _annotate_gender_by_names(self):
         # identificaiton by name
-        male_names, female_names = make_dataset.get_namelists()
-        names = list(self.chars.keys())
+        female_names, male_names = make_dataset.get_namelists()
+        names = list(self.chars.keys()).copy()
         name_genders = {}
 
-        for name in names:
-            if name in male_names:
+        for name in list(names):
+            first = self.chars[name][2]
+            if first in male_names:
                 name_genders[name] = "MALE"
-            elif name in female_names:
+            elif first in female_names:
                 name_genders[name] = "FEMALE"
             else:
                 name_genders[name] = "UNKNOWN"
@@ -102,7 +114,7 @@ class GenderAnnotation:
             gender = self._assign_gender_by_pronouns(pronouns)
             name_genders[name] = gender
 
-        print(f"_annotate_gender_by_names:"
+        print(f"_annotate_gender_by_pronouns:"
               f"{name_genders}")
         return name_genders
 

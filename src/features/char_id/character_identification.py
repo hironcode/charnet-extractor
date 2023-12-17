@@ -21,6 +21,7 @@ Steps:
 import spacy
 from spacy.matcher import Matcher
 from collections import defaultdict
+from nameparser import HumanName
 
 # import local files
 from src.data import make_dataset
@@ -41,7 +42,7 @@ class CharacterIdentification(GenderAnnotation):
         """
 
         chars = defaultdict(
-            lambda: ["GENDER UNDEFINED", []]
+            lambda: ["GENDER UNDEFINED", [], "FIRST NAME", "LAST NAME"]
         )
         for i, ent in enumerate(self.doc.ents):
             if ent.label_ == "PERSON":
@@ -53,8 +54,11 @@ class CharacterIdentification(GenderAnnotation):
                 # print(f"ent.start: {ent.start}")
                 # print(f"self.doc[ent.start-10:ent.start+10]: {self.doc[ent.start]}")
                 # print("===============================================")
-
-                chars[ent.text][1].append(ent.start)
+                name = ent.text
+                name_parsed = HumanName(name)
+                chars[name][1].append(ent.start)
+                chars[name][2] = name_parsed.first
+                chars[name][3] = name_parsed.last
         self.chars = chars
         return chars
 
@@ -64,9 +68,14 @@ class CharacterIdentification(GenderAnnotation):
             (a) lists of male first names and female first names
             (b) titles such as Mr., Mrs., or Lord etc...
             (c) detecting pronouns such as him, her, his, her, himself, and herself etc...
-
+            "a counter keeps track of counts of ‘his’ and ‘himself’ (on the one hand), and of ‘her’ and ‘herself’
+            (on the other) appearing in a win- dow of at most 3 words to the right of the name."
+            https://aclanthology.org/W14-0905/
         gender options: MALE, FEMALE, UNKNOWN
         """
+
+        """a counter keeps track of counts of ‘his’ and ‘himself’ (on the one hand), and of ‘her’ and ‘herself’
+            (on the other) appearing in a win- dow of at most 3 words to the right of the name."""
 
         if self.chars is None:
             raise ValueError(f"self.chars has not defined yet. Run detect_characters first.")

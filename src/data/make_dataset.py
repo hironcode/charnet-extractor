@@ -95,4 +95,31 @@ def get_namelists():
     # put the list in a set to do hash search in the future
     female_names = set(female_lines)
 
-    return male_names, female_names
+    return female_names, male_names
+
+
+def get_titles():
+    female_path = "../data/interim/unique_titles/female_honorific_titles.txt"
+    with open(female_path, 'r') as f:
+        female_lines = f.readlines()
+    # list of names begins in the line 8 in both the text files
+    female_lines = list(map(lambda x: x.replace("\n", ""), female_lines))
+    # remove periods after each title and make them lowercase
+    female_lines = list(map(lambda x: x.replace(".", ""), female_lines))
+    # female_lines = list(map(lambda x: x.lower(), female_lines))
+    # put the list in a set to do hash search in the future
+    female_names = set(female_lines)
+
+    male_path = "../data/interim/unique_titles/male_honorofic_titles.txt"
+    with open(male_path, 'r') as f:
+        male_lines = f.readlines()
+    # list of names begins in the line 8 in both the text files
+    male_lines = list(map(lambda x: x.replace("\n", ""), male_lines))
+    # remove periods after each title and make them lowercase
+    male_lines = list(map(lambda x: x.replace(".", ""), male_lines))
+    # male_lines = list(map(lambda x: x.lower(), male_lines))
+    # put the list in a set to do hash search in the future
+    male_names = set(male_lines)
+
+    return female_names, male_names
+
