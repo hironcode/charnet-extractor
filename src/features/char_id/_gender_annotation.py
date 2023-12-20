@@ -89,7 +89,7 @@ class GenderAnnotation:
         name_genders = {}
 
         for name in list(names):
-            first = self.chars[name][2]
+            first = self.chars[name].name_parsed.first
             if first in male_names:
                 name_genders[name] = "MALE"
             elif first in female_names:
@@ -107,7 +107,7 @@ class GenderAnnotation:
         # identification by pronouns
         for name in names:
             # get a list of indexes of a propernoun appearing in the doc
-            spans = self.chars[name][1]
+            spans = self.chars[name].occurences
             # get a list of pronouns appearing in the sentences that each propernoun is in
             pronouns = self._find_pronouns(spans)
             # assign the most likely gender to the character from the list of pronouns

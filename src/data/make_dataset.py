@@ -1,5 +1,7 @@
 import os
-
+import string
+from collections import defaultdict
+from src.data import format_datafiles
 
 def format_llm_ss(file:list="all"):
     texts = {}
@@ -18,7 +20,7 @@ def format_llm_ss(file:list="all"):
         "\n": " ",
         "\t": ""
     }
-    current_directory = "../data/raw/llm_ss/"
+    current_directory = "../../data/raw/llm_ss/"
 
     for title in titles:
         path = os.path.join(current_directory, title)

@@ -26,12 +26,12 @@ from nameparser import HumanName
 # import local files
 from src.data import make_dataset
 from src.features.char_id._gender_annotation import GenderAnnotation
-
+from src.tools.character_entity import Character
 
 class CharacterIdentification(GenderAnnotation):
 
     def __init__(self, text):
-        # set format: {name: [GENDER, [TOKEN INDEXES]]}
+        # set format: {name: Character Class}
         self.chars = None
         self.nlp = spacy.load("en_core_web_trf")
         self.doc = self.nlp(text)
@@ -41,9 +41,7 @@ class CharacterIdentification(GenderAnnotation):
         (1) use Named Entitiy Recognition (NER) to identify person entities
         """
 
-        chars = defaultdict(
-            lambda: ["GENDER UNDEFINED", [], "FIRST NAME", "LAST NAME"]
-        )
+        chars = {}
         for i, ent in enumerate(self.doc.ents):
             if ent.label_ == "PERSON":
                 # in the set, we have {name: (gender, [**index])}
@@ -55,10 +53,8 @@ class CharacterIdentification(GenderAnnotation):
                 # print(f"self.doc[ent.start-10:ent.start+10]: {self.doc[ent.start]}")
                 # print("===============================================")
                 name = ent.text
-                name_parsed = HumanName(name)
-                chars[name][1].append(ent.start)
-                chars[name][2] = name_parsed.first
-                chars[name][3] = name_parsed.last
+                character = Character(name)
+                character.appendOccurences(ent.start)
         self.chars = chars
         return chars
 
@@ -99,11 +95,11 @@ class CharacterIdentification(GenderAnnotation):
 
             # if all the specified genders in the list are FEMALE
             if genders.count("FEMALE") == size:
-                self.chars[name][0] = "FEMALE"
+                self.chars[name].updateGender("FEMALE")
             # if all the specified genders in the list are MALE
             elif genders.count("MALE") == size:
-                self.chars[name][0] = "MALE"
+                self.chars[name].updateGender("MALE")
             # if the two of the elements are FEMALE and MALE or all undefined
             else:
-                self.chars[name][0] = gender_p
+                self.chars[name][0].updateGender(gender_p)
         return self.chars
