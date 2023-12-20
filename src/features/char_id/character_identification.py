@@ -28,8 +28,8 @@ from src.data import make_dataset
 from src.features.char_id._gender_annotation import GenderAnnotation
 from src.tools.character_entity import Character
 
-class CharacterIdentification(GenderAnnotation):
 
+class CharacterIdentification(GenderAnnotation):
     def __init__(self, text):
         # set format: {name: Character Class}
         self.chars = None

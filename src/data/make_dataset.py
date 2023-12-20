@@ -2,11 +2,16 @@ import os
 import string
 from collections import defaultdict
 from src.data import format_datafiles
+from src.tools.path_tools import PathTools
+_pt = PathTools()
 
 def format_llm_ss(file:list="all"):
     texts = {}
 
-    dir_path = "../data/raw/llm_ss"
+    # dir_path = os.path.realpath(__file__)   # User/username/..../RootFolder/src/data/make_dataset.py
+    # dir_path = dir_path.rsplit("/", 3)  # ["User/..../RootFolder", "src", "data", "make_dataset.py"]
+    # dir_path = dir_path[0] + "/data/raw/llm_ss"
+    dir_path = _pt.get_target_dir("data/raw/llm_ss")
 
     if file == "all":
         titles = [
@@ -20,10 +25,9 @@ def format_llm_ss(file:list="all"):
         "\n": " ",
         "\t": ""
     }
-    current_directory = "../../data/raw/llm_ss/"
 
     for title in titles:
-        path = os.path.join(current_directory, title)
+        path = os.path.join(dir_path, title)
         with open(path, 'r') as f:
             textlines = f.readlines()
 
@@ -37,13 +41,13 @@ def format_llm_ss(file:list="all"):
             for key, val in signs.items():
                 line = line.replace(key, val)
             texts[title] += line
-
     return texts
+
 
 def format_human_ss(file:list="all"):
     texts = {}
 
-    dir_path = "../data/external/human_ss"
+    dir_path = _pt.get_target_dir("data/external/human_ss")
 
     if file == "all":
         titles = [
@@ -58,10 +62,8 @@ def format_human_ss(file:list="all"):
         "\t": ""
     }
 
-    current_directory = "../data/external/human_ss/"
-
     for title in titles:
-        path = current_directory + title
+        path = os.path.join(dir_path, title)
         with open(path, 'r') as f:
             textlines = f.readlines()
 
@@ -81,7 +83,8 @@ def format_human_ss(file:list="all"):
 
 def get_namelists():
 
-    male_path = "../data/external/name_list/male_name.txt"
+    male_path = _pt.get_target_dir("data/external/name_list/male_name.txt")
+
     with open(male_path, 'r') as f:
         male_lines = f.readlines()
     # list of names begins in the line 8 in both the text files
@@ -89,7 +92,7 @@ def get_namelists():
     # put the list in a set to do hash search in the future
     male_names = set(male_lines)
 
-    female_path = "../data/external/name_list/female_name.txt"
+    female_path = _pt.get_target_dir("data/external/name_list/female_name.txt")
     with open(female_path, 'r') as f:
         female_lines = f.readlines()
     # list of names begins in the line 8 in both the text files
@@ -101,7 +104,8 @@ def get_namelists():
 
 
 def get_titles():
-    female_path = "../data/interim/unique_titles/female_honorific_titles.txt"
+    # female_path = "../data/interim/unique_titles/female_honorific_titles.txt"
+    female_path = _pt.get_target_dir("data/interim/unique_titles/female_honorific_titles.txt")
     with open(female_path, 'r') as f:
         female_lines = f.readlines()
     # list of names begins in the line 8 in both the text files
@@ -112,7 +116,8 @@ def get_titles():
     # put the list in a set to do hash search in the future
     female_names = set(female_lines)
 
-    male_path = "../data/interim/unique_titles/male_honorofic_titles.txt"
+    # male_path = "../data/interim/unique_titles/male_honorofic_titles.txt"
+    male_path = _pt.get_target_dir("data/interim/unique_titles/male_honorofic_titles.txt")
     with open(male_path, 'r') as f:
         male_lines = f.readlines()
     # list of names begins in the line 8 in both the text files
@@ -125,3 +130,38 @@ def get_titles():
 
     return female_names, male_names
 
+
+def get_hypocorisms(nicknames_for_names:bool=True):
+    """
+    :return: dict{ALPHABETS: dict{NAMES: [HYPOCORISMS]}}
+    :return(reverse=True): dict{ALPHABETS: dict{HYPOCORISMS: [NAMES]}}
+    """
+
+    abc = set(string.ascii_uppercase)
+    hypocorisms = {
+        initial: defaultdict(list) for initial in abc
+    }
+
+    if nicknames_for_names is True:
+        path = _pt.get_target_dir("data/interim/hypocorisms/hypocorisms_nickname_for_names.txt")
+    elif nicknames_for_names is False:
+        path = _pt.get_target_dir("data/interim/hypocorisms/hypocorisms_name_for_nicknames.txt")
+    else:
+        ValueError("For reverse, only boolen values are accepted")
+
+    with open(path, 'r') as f:
+        lines = f.readlines()
+    for line in lines:
+        # if the line is just a newline command, remove it from the text
+        if line == "\n":
+            continue
+        # remove a line break
+        line = line.replace("\n", "")
+
+        root_branch_list = line.split("@")
+        root = root_branch_list[0]
+        branch = root_branch_list[1]
+        initial = root.upper()[0]
+
+        hypocorisms[initial][root].append(branch)
+    return hypocorisms

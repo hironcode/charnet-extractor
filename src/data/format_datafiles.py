@@ -149,18 +149,16 @@ def format_hypocorisms(reverse:bool=True):
             for _, name_nicknames in hypocorisms.items():
                 # and for each name and nickname
                 for name in name_nicknames.keys():
-                    f.write(f"@ {name}\n")
                     for nickname in name_nicknames[name]:
-                        f.write(f"/ {nickname}\n")
+                        f.write(f"{name}@{nickname}\n")
     elif reverse is True:
         with open(os.path.join(folder_dir, "hypocorisms_nickname_for_names.txt"), 'w') as f:
             # for each alphabet
             for _, name_nicknames in hypocorisms.items():
                 # and for each name and nickname
                 for nickname in name_nicknames.keys():
-                    f.write(f"@ {nickname}\n")
                     for name in name_nicknames[nickname]:
-                        f.write(f"/ {name}\n")
+                        f.write(f"{nickname}@{name}\n")
 
 if __name__ == '__main__':
-    format_hypocorisms(reverse=True)
+    format_hypocorisms(reverse=False)
