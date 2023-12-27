@@ -165,3 +165,16 @@ def get_hypocorisms(nicknames_for_names:bool=True):
 
         hypocorisms[initial][root].append(branch)
     return hypocorisms
+
+def get_surnames():
+    path = _pt.get_target_dir('data/external/name_list/surnames.txt')
+    with open(path, 'r') as f:
+        lines = f.readlines()
+    surnames = set()
+    for surname in lines:
+        if surname == '\n':
+            continue
+        surname = surname.replace("\n", "")
+        surnames.add(surname)
+    return surnames
+

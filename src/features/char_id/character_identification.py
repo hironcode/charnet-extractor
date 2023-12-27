@@ -53,8 +53,10 @@ class CharacterIdentification(GenderAnnotation):
                 # print(f"self.doc[ent.start-10:ent.start+10]: {self.doc[ent.start]}")
                 # print("===============================================")
                 name = ent.text
-                character = Character(name)
-                character.appendOccurences(ent.start)
+                if name not in chars.keys():
+                    character = Character(name)
+                    chars[name] = character
+                chars[name].appendOccurences(ent.start)
         self.chars = chars
         return chars
 

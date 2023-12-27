@@ -95,6 +95,7 @@ class GenderAnnotation:
             elif first in female_names:
                 name_genders[name] = "FEMALE"
             else:
+                # this condition includes a case where first is None
                 name_genders[name] = "UNKNOWN"
 
         print(f"_annotate_gender_by_names:"
@@ -158,11 +159,8 @@ class GenderAnnotation:
 
                 # print(pronouns)
                 # print("\t =====================================================================")
-
             j += 1
-
             # print("------------------------------------------------")
-
         return mentions
 
     def _match_pronouns(self, sent):
@@ -195,6 +193,7 @@ class GenderAnnotation:
         :return: the most likely gender
         """
         male, female = 0, 0
+        size = len(pronouns)
         male_pronouns = ["he", "his", "him", "himself"]
         female_pronouns = ["she", "her", "hers", "herself"]
         for pron in pronouns:
@@ -205,9 +204,11 @@ class GenderAnnotation:
 
         gender = 'UNKNOWN'
         if male > female:
-            gender= "MALE"
+            # if the male pronouns are more than 80% of the whole list
+            if male/size >= 0.8:
+                gender = "MALE"
         elif female > male:
-            gender= "FEMALE"
-        elif female == male:
-            gender= "UNKNOWN"
+            # if the female pronouns are more than 80% of the whole list
+            if female/size >= 0.8:
+                gender = "FEMALE"
         return gender
