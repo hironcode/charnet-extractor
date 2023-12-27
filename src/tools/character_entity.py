@@ -1,19 +1,20 @@
 from nameparser import HumanName
+from src.tools.data_based_name_parser import NameParserChecker
 
 class Character:
     def __init__(self, name:str):
         self.name = name
-        self.name_parsed = HumanName(name)
+        self.name_parsed = NameParserChecker(name)
         self.gender = "GENDER UNDEFINED"
         self.occurences = []
         self.referent = "REFERENT UNDEFINED"
 
         # self.possible_referents = self.getPossibleRerefents()
 
-    def updateGender(self, gender):
+    def update_gender(self, gender):
         self.gender = gender
 
-    def appendOccurences(self, start_idx:int):
+    def append_occurences(self, start_idx:int):
         self.occurences.append(start_idx)
 
     def __str__(self):
@@ -22,19 +23,12 @@ class Character:
     def info(self):
         inf = {
             'name': self.name,
+            'name_parsed': self.name_parsed,
             'gender': self.gender,
             'occurences': self.occurences,
             'referent': self.referent
         }
         return inf
 
-    def updateReferent(self, referent):
+    def update_referent(self, referent):
         self.referent = referent
-
-    def getPossibleRerefents(self):
-        possible = set()
-
-        if not self.name_parsed.first and not self.name_parsed.last:
-            return
-
-        possible.add(self.name_parsed.first, self.name_parsed.last)

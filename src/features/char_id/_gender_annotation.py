@@ -18,7 +18,30 @@ class GenderAnnotation:
         self.doc = doc
         self.chars = chars
 
+    def _annotate_gender_by_titles_simple(self):
+        female_titles, male_titles = make_dataset.get_titles()
+        name_genders = {
+            name: "UNKNOWN" for name in list(self.chars.keys())
+        }
+
+        for name, character_obj in self.chars.items():
+            title = character_obj.name_parsed.title
+            if title == '':
+                continue
+            else:
+                if title in female_titles:
+                    name_genders[name] = "FEMALE"
+                elif title in male_titles:
+                    name_genders[name] = "MALE"
+                else:
+                    name_genders[name] = "UNKNOWN"
+        return name_genders
+
     def _annotate_gender_by_titiles(self):
+        """
+        This method is deprecated if character names are extracted with titles
+        :return:
+        """
         # identification by titles
         female_titles, male_titles = make_dataset.get_titles()
 
@@ -50,8 +73,6 @@ class GenderAnnotation:
                 name_genders[name] = "FEMALE"
             elif gender.count("MALE") >= size/2:
                 name_genders[name] = "MALE"
-        print(f"_annotate_gender_by_titles: "
-              f"{name_genders}")
         return name_genders
 
     def _match_gender_title(self, male_titles, female_titles):
@@ -97,9 +118,6 @@ class GenderAnnotation:
             else:
                 # this condition includes a case where first is None
                 name_genders[name] = "UNKNOWN"
-
-        print(f"_annotate_gender_by_names:"
-              f"{name_genders}")
         return name_genders
 
     def _annotate_gender_by_pronouns(self):
@@ -114,9 +132,6 @@ class GenderAnnotation:
             # assign the most likely gender to the character from the list of pronouns
             gender = self._assign_gender_by_pronouns(pronouns)
             name_genders[name] = gender
-
-        print(f"_annotate_gender_by_pronouns:"
-              f"{name_genders}")
         return name_genders
 
     def _find_pronouns(self, token_idxes):

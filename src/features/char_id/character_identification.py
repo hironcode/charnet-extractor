@@ -21,7 +21,6 @@ Steps:
 import spacy
 from spacy.matcher import Matcher
 from collections import defaultdict
-from nameparser import HumanName
 
 # import local files
 from src.data import make_dataset
@@ -42,6 +41,8 @@ class CharacterIdentification(GenderAnnotation):
         """
 
         chars = {}
+        female_titles, male_titles = make_dataset.get_titles()
+        titles = female_titles.union(male_titles)
         for i, ent in enumerate(self.doc.ents):
             if ent.label_ == "PERSON":
                 # in the set, we have {name: (gender, [**index])}
@@ -53,12 +54,29 @@ class CharacterIdentification(GenderAnnotation):
                 # print(f"self.doc[ent.start-10:ent.start+10]: {self.doc[ent.start]}")
                 # print("===============================================")
                 name = ent.text
+
+                # identify a title if the name has one
+                if ent.start - 1 >= 0:
+                    title = self.doc[ent.start - 1].text
+                    title_w_o_period = title.replace(".", "")
+                else:
+                    title = None
+                    title_w_o_period = None
+
+                if title_w_o_period in titles:
+                    name = f"{title} {name}"
+
+                # create a dictionary index if the name does not exist in the dict yet
+                # the name might have a title
                 if name not in chars.keys():
                     character = Character(name)
                     chars[name] = character
-                chars[name].appendOccurences(ent.start)
+                chars[name].append_occurences(ent.start)
         self.chars = chars
         return chars
+
+    def title(self):
+        pass
 
     def annotate_gender(self):
         """
@@ -67,7 +85,7 @@ class CharacterIdentification(GenderAnnotation):
             (b) titles such as Mr., Mrs., or Lord etc...
             (c) detecting pronouns such as him, her, his, her, himself, and herself etc...
             "a counter keeps track of counts of ‘his’ and ‘himself’ (on the one hand), and of ‘her’ and ‘herself’
-            (on the other) appearing in a win- dow of at most 3 words to the right of the name."
+            (on the other) appearing in a window of at most 3 words to the right of the name."
             https://aclanthology.org/W14-0905/
         gender options: MALE, FEMALE, UNKNOWN
         """
@@ -80,9 +98,18 @@ class CharacterIdentification(GenderAnnotation):
         # initialize the GenderAnnotation class upon defining self.char
         super().__init__(self.nlp, self.doc, self.chars)
 
-        name_genders_title = self._annotate_gender_by_titiles()
+        name_genders_title = self._annotate_gender_by_titles_simple()
+        print(f"_annotate_gender_by_titles_siple: "
+              f"{name_genders_title}")
+
         name_genders_name = self._annotate_gender_by_names()
+        print(f"_annotate_gender_by_names:"
+              f"{name_genders_name}")
+
         name_genders_pronoun = self._annotate_gender_by_pronouns()
+        print(f"_annotate_gender_by_pronouns:"
+              f"{name_genders_pronoun}")
+
         for name in list(self.chars.keys()):
             gender_t = name_genders_title[name]
             gender_n = name_genders_name[name]
@@ -97,11 +124,11 @@ class CharacterIdentification(GenderAnnotation):
 
             # if all the specified genders in the list are FEMALE
             if genders.count("FEMALE") == size:
-                self.chars[name].updateGender("FEMALE")
+                self.chars[name].update_gender("FEMALE")
             # if all the specified genders in the list are MALE
             elif genders.count("MALE") == size:
-                self.chars[name].updateGender("MALE")
+                self.chars[name].update_gender("MALE")
             # if the two of the elements are FEMALE and MALE or all undefined
             else:
-                self.chars[name][0].updateGender(gender_p)
+                self.chars[name][0].update_gender(gender_p)
         return self.chars

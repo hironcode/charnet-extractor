@@ -103,7 +103,10 @@ def get_namelists():
     return female_names, male_names
 
 
-def get_titles():
+def get_titles() -> tuple[set, set]:
+    """
+    :return: set of female titles and set of male titles. The elements in the sets does not contain a period, capitalized.
+    """
     # female_path = "../data/interim/unique_titles/female_honorific_titles.txt"
     female_path = _pt.get_target_dir("data/interim/unique_titles/female_honorific_titles.txt")
     with open(female_path, 'r') as f:
@@ -114,7 +117,7 @@ def get_titles():
     female_lines = list(map(lambda x: x.replace(".", ""), female_lines))
     # female_lines = list(map(lambda x: x.lower(), female_lines))
     # put the list in a set to do hash search in the future
-    female_names = set(female_lines)
+    female_titles = set(female_lines)
 
     # male_path = "../data/interim/unique_titles/male_honorofic_titles.txt"
     male_path = _pt.get_target_dir("data/interim/unique_titles/male_honorofic_titles.txt")
@@ -126,15 +129,18 @@ def get_titles():
     male_lines = list(map(lambda x: x.replace(".", ""), male_lines))
     # male_lines = list(map(lambda x: x.lower(), male_lines))
     # put the list in a set to do hash search in the future
-    male_names = set(male_lines)
+    male_titles = set(male_lines)
 
-    return female_names, male_names
+    return female_titles, male_titles
 
 
 def get_hypocorisms(nicknames_for_names:bool=True):
     """
-    :return: dict{ALPHABETS: dict{NAMES: [HYPOCORISMS]}}
-    :return(reverse=True): dict{ALPHABETS: dict{HYPOCORISMS: [NAMES]}}
+    The initials are upper-case, the names are capitalized, and the hypocorisms are also capitalized.
+
+    :return: dict{INITIALS: dict{Names: [Hypocorisms]}}
+    :return(reverse=True): dict{INITIALS: dict{Hypocorisms: [Names]}}
+
     """
 
     abc = set(string.ascii_uppercase)
@@ -167,7 +173,7 @@ def get_hypocorisms(nicknames_for_names:bool=True):
     return hypocorisms
 
 def get_surnames():
-    path = _pt.get_target_dir('data/external/name_list/surnames.txt')
+    path = _pt.get_target_dir('data/external/name_list/surnames_large.txt')
     with open(path, 'r') as f:
         lines = f.readlines()
     surnames = set()
@@ -175,6 +181,7 @@ def get_surnames():
         if surname == '\n':
             continue
         surname = surname.replace("\n", "")
+        surname = surname.capitalize()
         surnames.add(surname)
     return surnames
 
