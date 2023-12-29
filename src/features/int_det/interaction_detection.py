@@ -13,4 +13,5 @@ class InteractionDetection:
         self.ann = setup.initServer(text)
 
     def coref(self):
-        print(self.ann.corefChain)
+        return self.ann.corefChain
+

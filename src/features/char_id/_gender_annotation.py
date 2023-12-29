@@ -18,7 +18,7 @@ class GenderAnnotation:
         self.doc = doc
         self.chars = chars
 
-    def _annotate_gender_by_titles_simple(self):
+    def annotate_gender_by_titles_simple(self):
         female_titles, male_titles = make_dataset.get_titles()
         name_genders = {
             name: "UNKNOWN" for name in list(self.chars.keys())
@@ -37,7 +37,7 @@ class GenderAnnotation:
                     name_genders[name] = "UNKNOWN"
         return name_genders
 
-    def _annotate_gender_by_titiles(self):
+    def annotate_gender_by_titiles(self):
         """
         This method is deprecated if character names are extracted with titles
         :return:
@@ -103,7 +103,7 @@ class GenderAnnotation:
             title_name.append((self.doc[match[1]], self.doc[match[1]+1:match[2]]))
         return title_name
 
-    def _annotate_gender_by_names(self):
+    def annotate_gender_by_names(self):
         # identificaiton by name
         female_names, male_names = make_dataset.get_namelists()
         names = list(self.chars.keys()).copy()
@@ -120,7 +120,7 @@ class GenderAnnotation:
                 name_genders[name] = "UNKNOWN"
         return name_genders
 
-    def _annotate_gender_by_pronouns(self):
+    def annotate_gender_by_pronouns(self):
         names = list(self.chars.keys())
         name_genders = {}
         # identification by pronouns

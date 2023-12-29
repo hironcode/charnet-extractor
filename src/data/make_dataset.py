@@ -173,7 +173,11 @@ def get_hypocorisms(nicknames_for_names:bool=True):
     return hypocorisms
 
 def get_surnames():
-    path = _pt.get_target_dir('data/external/name_list/surnames_large.txt')
+    """
+    This returns a set of surnames that also include commonly used first names
+    :return:
+    """
+    path = _pt.get_target_dir('data/interim/surnames/surnames_large_unique.txt')
     with open(path, 'r') as f:
         lines = f.readlines()
     surnames = set()
@@ -183,5 +187,8 @@ def get_surnames():
         surname = surname.replace("\n", "")
         surname = surname.capitalize()
         surnames.add(surname)
+    female_names, male_names = get_namelists()
+    surnames -= female_names
+    surnames -= male_names
     return surnames
 

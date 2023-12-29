@@ -1,7 +1,10 @@
 # import libraries
+import collections
+
 import src.tools.character_entity
 # import local files
 from src.data import make_dataset
+import itertools
 
 """
 Approach
@@ -40,14 +43,23 @@ class OccurenceUnification:
 
         # a dict for storing possible referents of each name
         self.char_referents = {
-            name: [] for name in list(self.chars)
+            name: set() for name in list(self.chars)
         }
 
-    def unify_characters(self):
-        pass
+    def unify_referents(self):
+        ref_hypo = self.unify_by_hypocorisms()
+        ref_sim = self.unify_by_similarity()
+        for name in list(self.char_referents.keys()):
+            self.char_referents[name] = self.char_referents[name].union(set(ref_hypo[name]))
+            self.char_referents[name] = self.char_referents[name].union(set(ref_sim[name]))
+        return self.char_referents
 
     def unify_by_hypocorisms(self):
         # for each character
+        char_referents = {
+            name: [] for name in list(self.chars)
+        }
+
         for name, character in self.chars.items():
             # get the first name
             first = character.name_parsed.first
@@ -58,11 +70,8 @@ class OccurenceUnification:
             # if the name is in the initial's index of the hypocorisms dictionary
             if first in self.hypocorisms[initial]:
                 # add the list of referents to the self.char_referents list
-                self.char_referents[name].extend(self.hypocorisms[initial][first])
-            else:
-                # if not, the first name refers to the person him/herself
-                self.char_referents[character.name].append("SELF")
-        return self.char_referents
+                char_referents[name] = self.hypocorisms[initial][first]
+        return char_referents
 
     def unify_by_similarity(self):
         """
@@ -77,6 +86,24 @@ class OccurenceUnification:
         5. Names with only first name or last name (e.g. ‘Elizabeth’ or ‘Bennet’).
         :return:
         """
+        char_referents = {
+            name: [] for name in list(self.chars)
+        }
+
+        for name, character in self.chars.items():
+            possible_ref = self.get_possible_referent(character)
+            # exclude blank referents
+            referents = [ref for ref in possible_ref.values() if ref]
+            char_referents[name] = list(self.flatten(referents))
+        return char_referents
+
+    def flatten(self, l):
+        # reference: https://note.nkmk.me/python-list-flatten/
+        for el in l:
+            if isinstance(el, collections.abc.Iterable) and not isinstance(el, (str, bytes)):
+                yield from self.flatten(el)
+            else:
+                yield el
 
     def get_possible_referent(self, character:src.tools.character_entity.Character):
         """
@@ -89,6 +116,7 @@ class OccurenceUnification:
         middle = character.name_parsed.middle
 
         possible = {
+            "full": character.name,
             "title first last": '',
             "title first_ini last": '',
             # nickname might take multiple forms so list

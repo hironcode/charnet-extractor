@@ -25,10 +25,11 @@ from collections import defaultdict
 # import local files
 from src.data import make_dataset
 from src.features.char_id._gender_annotation import GenderAnnotation
+from src.features.char_id._unify_occurences import OccurenceUnification
 from src.tools.character_entity import Character
 
 
-class CharacterIdentification(GenderAnnotation):
+class CharacterIdentification:
     def __init__(self, text):
         # set format: {name: Character Class}
         self.chars = None
@@ -96,17 +97,18 @@ class CharacterIdentification(GenderAnnotation):
         if self.chars is None:
             raise ValueError(f"self.chars has not defined yet. Run detect_characters first.")
         # initialize the GenderAnnotation class upon defining self.char
-        super().__init__(self.nlp, self.doc, self.chars)
+        # super().__init__(self.nlp, self.doc, self.chars)
+        ga = GenderAnnotation(self.nlp, self.doc, self.chars)
 
-        name_genders_title = self._annotate_gender_by_titles_simple()
+        name_genders_title = ga.annotate_gender_by_titles_simple()
         print(f"_annotate_gender_by_titles_siple: "
               f"{name_genders_title}")
 
-        name_genders_name = self._annotate_gender_by_names()
+        name_genders_name = ga.annotate_gender_by_names()
         print(f"_annotate_gender_by_names:"
               f"{name_genders_name}")
 
-        name_genders_pronoun = self._annotate_gender_by_pronouns()
+        name_genders_pronoun = ga.annotate_gender_by_pronouns()
         print(f"_annotate_gender_by_pronouns:"
               f"{name_genders_pronoun}")
 
@@ -132,3 +134,57 @@ class CharacterIdentification(GenderAnnotation):
             else:
                 self.chars[name][0].update_gender(gender_p)
         return self.chars
+
+    def unify_occurences(self) -> [tuple]:
+        """
+        Rules (https://aclanthology.org/D15-1088/)
+        Two vertices cannot be merged if
+        (1) the inferred genders of both names differ,
+        (2) both names share a common surname but different first names, or
+        (3) the honorific of both names differ, e.g., “Miss” and “Mrs.”
+        :return: list representation of networkX nodes/edges
+        """
+        if self.chars is None:
+            raise ValueError(f"self.chars has not defined yet. Run detect_characters first.")
+        ou = OccurenceUnification(self.chars)
+        referents = ou.unify_referents()
+
+        # merge occurences
+        same_chars = {}
+        # check through if each referent exists in the story (or self.chars)
+        chars_all = set(self.chars.keys())
+
+        """possible to make this part faster"""
+
+        # for each character name
+        for name, ref in referents.items():
+            # fetch possible referents in a form of set
+            chars_potential = set(ref)
+            # get the character names that exists in the story (or self.chars) out of the potential character names
+            chars_present = chars_all.intersection(chars_potential)
+            same_chars[name] = chars_present
+
+        char_groups = []
+        # i for list elements in the first dimension
+        # j for str elements (names) in the second dimension
+        i = 0
+        # skip
+        skip_list = []
+
+        # get a list of tuples of names and referents in a decending order based on the length of names
+        names_refs = sorted(list(same_chars.items()), key=lambda x: len(x[0]), reverse=True)
+        while i < len(same_chars):
+            name = names_refs[i][0]
+            if name in skip_list:
+                i += 1
+                continue
+            refs: set = names_refs[i][1]
+            for ref in refs:
+                skip_list.append(ref)
+                if ref == name:
+                    continue
+                refs2: set = same_chars[ref]
+                refs = refs.union(refs2)
+            char_groups.append(list(refs))
+            i += 1
+        return char_groups

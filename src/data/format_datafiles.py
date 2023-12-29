@@ -4,6 +4,10 @@ import itertools
 import os
 import string
 from collections import defaultdict
+from src.tools.path_tools import PathTools
+from src.data import make_dataset
+
+_pt = PathTools()
 
 
 def format_titles(files:list=["female_honorific_titles.txt", "male_honorific_titles.txt"]):
@@ -160,5 +164,32 @@ def format_hypocorisms(reverse:bool=True):
                     for name in name_nicknames[nickname]:
                         f.write(f"{nickname}@{name}\n")
 
+
+def format_surnames():
+    """
+    exclude surnames that commonly appears as first names from the large surname txt list
+    :return:
+    """
+    path = _pt.get_target_dir('data/external/name_list/surnames_large.txt')
+    with open(path, 'r') as f:
+        lines = f.readlines()
+    surnames = set()
+    for surname in lines:
+        if surname == '\n':
+            continue
+        surname = surname.replace("\n", "")
+        surname = surname.capitalize()
+        surnames.add(surname)
+    female_names, male_names = make_dataset.get_namelists()
+    surnames -= female_names
+    surnames -= male_names
+    surname_list = list(surnames)
+    surname_list.sort()
+    new_path = _pt.get_target_dir("data/interim/surnames/surnames_large_unique.txt")
+    with open(new_path, 'w') as f:
+        for surname in surname_list:
+            f.write(f"{surname}\n")
+
+
 if __name__ == '__main__':
-    format_hypocorisms(reverse=False)
+    format_surnames()
