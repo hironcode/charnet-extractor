@@ -73,8 +73,8 @@ class NameParserChecker:
                     # if the parsed name object has a part that exists in firstname or nickname list,
                     # return the part as a correct first name
                     return part, c
-            # if no such part, return None, denoting that the full name doesn't have a first name
-            return None, None
+        # if no such part, return None, denoting that the full name doesn't have a first name
+        return None, None
 
     def check_last(self, name_parsed):
         """

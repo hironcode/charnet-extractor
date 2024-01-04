@@ -98,7 +98,7 @@ def format_hypocorisms(reverse:bool=True):
             continue
 
         # remove accented alphabets
-        line = remove_accents(line)
+        # line = remove_accents(line)
 
         # remove spaces
         line = line.replace(" ", "")
@@ -191,5 +191,42 @@ def format_surnames():
             f.write(f"{surname}\n")
 
 
+def format_llm_ss(file:list="all"):
+    texts = {}
+
+    dir_path = _pt.get_target_dir("data/raw/llm_ss")
+
+    if file == "all":
+        titles = [
+            f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))
+        ]
+    else:
+        titles = file
+
+    # signs to remove and alternative string to be replaced to
+    signs = {
+        "\n": " ",
+        "\t": "",
+    }
+
+    for title in titles:
+        path = os.path.join(dir_path, title)
+        with open(path, 'r') as f:
+            textlines = f.readlines()
+
+        # initialize the dict
+        texts[title] = ""
+        for line in textlines:
+            # if the line is a separate line, remove it
+            if line == "---":
+                continue
+
+            # replace specified signs with a corresponding str
+            for key, val in signs.items():
+                line = line.replace(key, val)
+            texts[title] += line
+    return texts
+
+
 if __name__ == '__main__':
-    format_surnames()
+    format_hypocorisms(reverse=False)

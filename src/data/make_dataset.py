@@ -4,6 +4,7 @@ from collections import defaultdict
 from src.data import format_datafiles
 from src.tools.path_tools import PathTools
 _pt = PathTools()
+import re
 
 def format_llm_ss(file:list="all"):
     texts = {}
@@ -23,7 +24,7 @@ def format_llm_ss(file:list="all"):
     # signs to remove and alternative string to be replaced to
     signs = {
         "\n": " ",
-        "\t": ""
+        "\t": "",
     }
 
     for title in titles:
@@ -36,6 +37,10 @@ def format_llm_ss(file:list="all"):
         for line in textlines:
             # if the line is just a newline command, remove it from the text
             if line == "\n":
+                continue
+            elif line == "---":
+                continue
+            elif re.search(r"<c\d+>", line):
                 continue
             # replace specified signs with a corresponding str
             for key, val in signs.items():
@@ -82,7 +87,6 @@ def format_human_ss(file:list="all"):
 
 
 def get_namelists():
-
     male_path = _pt.get_target_dir("data/external/name_list/male_name.txt")
 
     with open(male_path, 'r') as f:
@@ -191,4 +195,3 @@ def get_surnames():
     surnames -= female_names
     surnames -= male_names
     return surnames
-
