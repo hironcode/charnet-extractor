@@ -27,14 +27,25 @@ from src.data import make_dataset
 from src.features.char_id._gender_annotation import GenderAnnotation
 from src.features.char_id._unify_occurences import OccurenceUnification
 from src.tools.character_entity import Character
+from src.models import model_saver
 
 
 class CharacterIdentification:
-    def __init__(self, text):
+    def __init__(self, text, title):
         # set format: {name: Character Class}
+        self.title = title
         self.chars = None
-        self.nlp = spacy.load("en_core_web_trf")
-        self.doc = self.nlp(text)
+        model = "en_core_web_trf"
+        self.nlp = spacy.load(model)
+
+        # load doc object
+        model_path = model_saver.get_spacy_doc_path(title, doc_type=model.replace("en_core_web_", ""))
+        if model_saver.exists(model_path):
+            self.doc = model_saver.get_model(model_path)
+            print('exist!')
+        else:
+            self.doc = self.nlp(text)
+            model_saver.save_model(model_path, self.doc)
 
     def detect_characters(self):
         """
@@ -124,6 +135,10 @@ class CharacterIdentification:
             # the pronoun approach is quite unstable
             # use the pronoun approach only if the first two gender approaches cannot identify a gender
 
+            # if all the genders in the list are UNKNOWN
+            if size == 0:
+                self.chars[name].update_gender(gender_p)
+
             # if all the specified genders in the list are FEMALE
             if genders.count("FEMALE") == size:
                 self.chars[name].update_gender("FEMALE")
@@ -132,7 +147,7 @@ class CharacterIdentification:
                 self.chars[name].update_gender("MALE")
             # if the two of the elements are FEMALE and MALE or all undefined
             else:
-                self.chars[name][0].update_gender(gender_p)
+                self.chars[name].update_gender(gender_p)
         return self.chars
 
     def unify_occurences(self) -> [tuple]:

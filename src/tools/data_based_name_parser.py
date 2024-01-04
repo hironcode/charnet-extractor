@@ -45,7 +45,6 @@ class NameParserChecker:
         self.nickname = self._name_parsed['nickname']
         self.title = self._name_parsed['title']
 
-
     def check_first(self, name_parsed):
         """
         :param name_parsed: dictionary
@@ -73,8 +72,13 @@ class NameParserChecker:
                     # if the parsed name object has a part that exists in firstname or nickname list,
                     # return the part as a correct first name
                     return part, c
-        # if no such part, return None, denoting that the full name doesn't have a first name
-        return None, None
+        # if no such part, return the first name, denoting that the full name has an unknown first name in the
+        # correct position.
+        # Of course, the name parser does not create a first name out of nothing.
+        # None of other name parts' qualifying as a first name means
+        # (1) the first name is unknown based on the name set (the first if statement) or
+        # (2) the other parts contain an unknown first name (so the else statement did not return anything).
+        return first, None
 
     def check_last(self, name_parsed):
         """
@@ -100,8 +104,8 @@ class NameParserChecker:
                     # if the parsed name object has a part that exists in the surname list,
                     # return the part as a correct surname
                     return part, c
-            # if no such part, return None, denoting that the full name doesn't have a last name
-            return None, None
+            # if no such part, return last, denoting that the full name has unknown last name
+            return last, None
 
     def as_dict(self):
         return self._name_parsed

@@ -25,7 +25,10 @@ class GenderAnnotation:
         }
 
         for name, character_obj in self.chars.items():
-            title = character_obj.name_parsed.title
+            title:str = character_obj.name_parsed.title
+            # remove a period
+            title = title.replace(".", "")
+
             if title == '':
                 continue
             else:
@@ -218,12 +221,13 @@ class GenderAnnotation:
                 female += 1
 
         gender = 'UNKNOWN'
+        threshold = 0.7
         if male > female:
-            # if the male pronouns are more than 80% of the whole list
-            if male/size >= 0.8:
+            # if the male pronouns are more than the percentile of the threshold of the whole list
+            if male/size >= threshold:
                 gender = "MALE"
         elif female > male:
-            # if the female pronouns are more than 80% of the whole list
-            if female/size >= 0.8:
+            # if the female pronouns are more than the percentile of the threshold of the whole list
+            if female/size >= threshold:
                 gender = "FEMALE"
         return gender
