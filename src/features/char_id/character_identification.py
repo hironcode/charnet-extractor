@@ -185,7 +185,6 @@ class CharacterIdentification:
 
         """possible to make this part faster"""
         # for each character name
-        print("referents:", referents)
         for name, ref in referents.items():
             # fetch possible referents in a form of set
             chars_potential = set(ref)
@@ -202,8 +201,6 @@ class CharacterIdentification:
                 # UNKNOWNは許容する
                 gender2 = self.chars[ref].gender
                 if self._gender_unmatch(gender1, gender2):
-                    print(gender1, gender2)
-                    print((name, ref))
                     to_remove.append((name, ref))
 
                 # if both have a title, but they do not match, they are two separate characters
@@ -215,8 +212,6 @@ class CharacterIdentification:
         for name, ref in to_remove:
             same_chars[name].discard(ref)
 
-        print("\n same chars:", same_chars)
-
         # if the same consistent referent exists in two separate characters' possible referent set,
         # prioritize the most frequent one (https://aclanthology.org/W14-0905/, https://aclanthology.org/E12-1065/)
         # {[REFERENT, REFERING NAME, COUNT]}
@@ -224,8 +219,6 @@ class CharacterIdentification:
         for name, refs in same_chars.items():
             for ref in refs:
                 repeated_referents[ref].append(name)
-
-        print("\n repeated referents", repeated_referents)
 
         # delete unrepeated referents
         to_remove = []
@@ -235,8 +228,6 @@ class CharacterIdentification:
         for ref in to_remove:
             repeated_referents.pop(ref)
 
-        print("\nrepeated referents", repeated_referents)
-
         # use union-find algorithm to cluster separate names to each group
         char_groups = CharacterGrouping(list(self.chars.keys()))
         for name, refs in same_chars.items():
@@ -245,8 +236,6 @@ class CharacterIdentification:
                 if ref in list(repeated_referents.keys()):
                     continue
                 char_groups.unite(name, ref)
-
-        print("\nchar groups", char_groups.groups())
 
         # unite a consistent but repeated reference with the most frequent one
         for ref, names in repeated_referents.items():
@@ -259,8 +248,6 @@ class CharacterIdentification:
                     max_name = name
                     max_occurences = occ
             char_groups.unite(ref, max_name)
-
-        print("\nchar groups", char_groups.groups())
 
         # merge each pair of names if they share the same gender or their titles are consistent
         # assign a name that potentially refers to different characters to the most frequent name too
@@ -294,7 +281,6 @@ class CharacterIdentification:
                 if first1 == first2 or last1 == last2:
                     correnspondence[char1].append(char2)
                     correnspondence[char2].append(char1)
-        print("\ncorrespondence:", correnspondence)
 
         # assign a name that potentially refers to different characters to the most frequent name too
         # Mr. Holmes -> Sherlock Holmes or Mycroft Holmes -> assign Sherlock as more frequent than Mycroft
