@@ -21,6 +21,7 @@ Steps:
 import spacy
 from spacy.matcher import Matcher
 from collections import defaultdict
+from unionfind import unionfind
 
 # import local files
 from src.data import make_dataset
@@ -28,6 +29,7 @@ from src.features.char_id._gender_annotation import GenderAnnotation
 from src.features.char_id._unify_occurences import OccurenceUnification
 from src.tools.character_entity import Character
 from src.models import model_saver
+from src.tools.character_grouping import CharacterGrouping
 
 
 class CharacterIdentification:
@@ -42,10 +44,11 @@ class CharacterIdentification:
         model_path = model_saver.get_spacy_doc_path(title, doc_type=model.replace("en_core_web_", ""))
         if model_saver.exists(model_path):
             self.doc = model_saver.get_model(model_path)
-            print('exist!')
+            print('Pickled model exists!')
         else:
             self.doc = self.nlp(text)
             model_saver.save_model(model_path, self.doc)
+            print("iPckled model didn't exist. Pickled a model.")
 
     def detect_characters(self):
         """
@@ -112,7 +115,7 @@ class CharacterIdentification:
         ga = GenderAnnotation(self.nlp, self.doc, self.chars)
 
         name_genders_title = ga.annotate_gender_by_titles_simple()
-        print(f"_annotate_gender_by_titles_siple: "
+        print(f"_annotate_gender_by_titles_simple: "
               f"{name_genders_title}")
 
         name_genders_name = ga.annotate_gender_by_names()
@@ -131,6 +134,7 @@ class CharacterIdentification:
             genders = [gender_t, gender_n]
             size = len(genders)
             size -= genders.count("UNKNOWN")
+            print(name, size, gender_p)
 
             # the pronoun approach is quite unstable
             # use the pronoun approach only if the first two gender approaches cannot identify a gender
@@ -138,9 +142,8 @@ class CharacterIdentification:
             # if all the genders in the list are UNKNOWN
             if size == 0:
                 self.chars[name].update_gender(gender_p)
-
             # if all the specified genders in the list are FEMALE
-            if genders.count("FEMALE") == size:
+            elif genders.count("FEMALE") == size:
                 self.chars[name].update_gender("FEMALE")
             # if all the specified genders in the list are MALE
             elif genders.count("MALE") == size:
@@ -149,6 +152,17 @@ class CharacterIdentification:
             else:
                 self.chars[name].update_gender(gender_p)
         return self.chars
+
+    def _gender_unmatch(self, gender1, gender2):
+        genders = [gender1, gender2]
+        # if one of the two is unknown, true
+        if genders.count("UNKNOWN") >= 1:
+            return False
+        # if two of them are the same
+        elif genders.count("FEMALE") == 2 or genders.count("MALE") == 2:
+            return False
+        else:
+            return True
 
     def unify_occurences(self) -> [tuple]:
         """
@@ -170,8 +184,8 @@ class CharacterIdentification:
         chars_all = set(self.chars.keys())
 
         """possible to make this part faster"""
-
         # for each character name
+        print("referents:", referents)
         for name, ref in referents.items():
             # fetch possible referents in a form of set
             chars_potential = set(ref)
@@ -179,27 +193,121 @@ class CharacterIdentification:
             chars_present = chars_all.intersection(chars_potential)
             same_chars[name] = chars_present
 
-        char_groups = []
-        # i for list elements in the first dimension
-        # j for str elements (names) in the second dimension
-        i = 0
-        # skip
-        skip_list = []
-
-        # get a list of tuples of names and referents in a decending order based on the length of names
-        names_refs = sorted(list(same_chars.items()), key=lambda x: len(x[0]), reverse=True)
-        while i < len(same_chars):
-            name = names_refs[i][0]
-            if name in skip_list:
-                i += 1
-                continue
-            refs: set = names_refs[i][1]
+        # filter referents that do not meet gender or title consistency
+        to_remove = []
+        for name, refs in same_chars.items():
+            gender1 = self.chars[name].gender
             for ref in refs:
-                skip_list.append(ref)
-                if ref == name:
+                # if the characters' genders do not match, they are different characters
+                # UNKNOWNは許容する
+                gender2 = self.chars[ref].gender
+                if self._gender_unmatch(gender1, gender2):
+                    print(gender1, gender2)
+                    print((name, ref))
+                    to_remove.append((name, ref))
+
+                # if both have a title, but they do not match, they are two separate characters
+                title1: str = self.chars[name].name_parsed.title
+                title2: str = self.chars[ref].name_parsed.title
+                if (title1 != '' and title2 != '') and (title1 != title2):
+                    to_remove.append((name, ref))
+                # otherwise, they are the same character
+        for name, ref in to_remove:
+            same_chars[name].discard(ref)
+
+        print("\n same chars:", same_chars)
+
+        # if the same consistent referent exists in two separate characters' possible referent set,
+        # prioritize the most frequent one (https://aclanthology.org/W14-0905/, https://aclanthology.org/E12-1065/)
+        # {[REFERENT, REFERING NAME, COUNT]}
+        repeated_referents = defaultdict(lambda: [])
+        for name, refs in same_chars.items():
+            for ref in refs:
+                repeated_referents[ref].append(name)
+
+        print("\n repeated referents", repeated_referents)
+
+        # delete unrepeated referents
+        to_remove = []
+        for ref, repeat in repeated_referents.items():
+            if len(repeat) <= 1:
+                to_remove.append(ref)
+        for ref in to_remove:
+            repeated_referents.pop(ref)
+
+        print("\nrepeated referents", repeated_referents)
+
+        # use union-find algorithm to cluster separate names to each group
+        char_groups = CharacterGrouping(list(self.chars.keys()))
+        for name, refs in same_chars.items():
+            for ref in refs:
+                # if a referent is repeated, skip it
+                if ref in list(repeated_referents.keys()):
                     continue
-                refs2: set = same_chars[ref]
-                refs = refs.union(refs2)
-            char_groups.append(list(refs))
-            i += 1
-        return char_groups
+                char_groups.unite(name, ref)
+
+        print("\nchar groups", char_groups.groups())
+
+        # unite a consistent but repeated reference with the most frequent one
+        for ref, names in repeated_referents.items():
+            max_name = names[0]
+            max_occurences = 0
+            # fetch refering names of each referent and get the char name of the maximum occurences
+            for name in names:
+                occ = len(self.chars[name].occurences)
+                if occ > max_occurences:
+                    max_name = name
+                    max_occurences = occ
+            char_groups.unite(ref, max_name)
+
+        print("\nchar groups", char_groups.groups())
+
+        # merge each pair of names if they share the same gender or their titles are consistent
+        # assign a name that potentially refers to different characters to the most frequent name too
+        # Mr. Holmes -> Sherlock Holmes or Mycroft Holmes -> assign Sherlock as more frequent than Mycroft
+        charlist = list(self.chars.keys())
+        correnspondence = defaultdict(list)
+
+        for i, char1 in enumerate(charlist[:-1]):
+            first1 = self.chars[char1].name_parsed.first
+            last1 = self.chars[char1].name_parsed.last
+            title1: str = self.chars[char1].name_parsed.title
+            l1 = [first1, last1, title1]
+            if l1.count('') >= 2:
+                continue
+
+            for char2 in charlist[i+1:]:
+                first2 = self.chars[char2].name_parsed.first
+                last2 = self.chars[char2].name_parsed.last
+                title2: str = self.chars[char2].name_parsed.title
+                l2 = [first2, last2, title2]
+                if l2.count('') >= 2:
+                    continue
+
+                # if the characters' genders do not match, they are different characters
+                if self.chars[char1].gender != self.chars[char2].gender:
+                    continue
+                # if both have a title, but they do not match, they are two separate characters
+                if (title1 != '' and title2 != '') and (title1 != title2):
+                    continue
+
+                if first1 == first2 or last1 == last2:
+                    correnspondence[char1].append(char2)
+                    correnspondence[char2].append(char1)
+        print("\ncorrespondence:", correnspondence)
+
+        # assign a name that potentially refers to different characters to the most frequent name too
+        # Mr. Holmes -> Sherlock Holmes or Mycroft Holmes -> assign Sherlock as more frequent than Mycroft
+        # unite a consistent but repeated reference with the most frequent one
+        for char1, char2s in correnspondence.items():
+            max_name = char2s[0]
+            max_occurences = 0
+            # fetch refering names of each referent and get the char name of the maximum occurences
+            for name in char2s:
+                occ = len(self.chars[name].occurences)
+                if occ > max_occurences:
+                    max_name = name
+                    max_occurences = occ
+            char_groups.unite(char1, max_name)
+
+        return char_groups.groups()

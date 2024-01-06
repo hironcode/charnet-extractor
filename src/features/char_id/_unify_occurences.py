@@ -116,7 +116,6 @@ class OccurenceUnification:
         middle = character.name_parsed.middle
 
         possible = {
-            "full": character.name,
             "title first last": '',
             "title first_ini last": '',
             # nickname might take multiple forms so list

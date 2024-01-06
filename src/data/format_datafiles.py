@@ -180,15 +180,108 @@ def format_surnames():
         surname = surname.replace("\n", "")
         surname = surname.capitalize()
         surnames.add(surname)
-    female_names, male_names = make_dataset.get_namelists()
-    surnames -= female_names
-    surnames -= male_names
+
+    # male first names
+    path = _pt.get_target_dir("data/external/name_list/male_name.txt")
+    with open(path, 'r') as f:
+        lines = f.readlines()
+    male = set()
+    for line in lines:
+        if line == '\n':
+            continue
+        line = line.replace("\n", "")
+        line = line.capitalize()
+        male.add(line)
+
+    # female
+    path = _pt.get_target_dir("data/external/name_list/female_name.txt")
+    with open(path, 'r') as f:
+        lines = f.readlines()
+    female = set()
+    for line in lines:
+        if line == '\n':
+            continue
+        line = line.replace("\n", "")
+        line = line.capitalize()
+        female.add(line)
+
+    # female, male = make_dataset.get_namelists()
+    surnames -= female
+    surnames -= male
     surname_list = list(surnames)
     surname_list.sort()
     new_path = _pt.get_target_dir("data/interim/surnames/surnames_large_unique.txt")
     with open(new_path, 'w') as f:
         for surname in surname_list:
             f.write(f"{surname}\n")
+
+def format_first_names():
+    """
+    exclude first names that commonly appears as a surname from the first name txt list
+    :return:
+    """
+
+    # surnames
+    path = _pt.get_target_dir('data/external/name_list/surnames.txt')
+    with open(path, 'r') as f:
+        lines = f.readlines()
+    surnames = set()
+    for surname in lines:
+        if surname == '\n':
+            continue
+        surname = surname.replace("\n", "")
+        surname = surname.capitalize()
+        surnames.add(surname)
+
+
+
+    path = _pt.get_target_dir("data/external/name_list/male_name.txt")
+    with open(path, 'r') as f:
+        lines = f.readlines()
+    male = set()
+    for line in lines:
+        if line == '\n':
+            continue
+        line = line.replace("\n", "")
+        line = line.capitalize()
+        male.add(line)
+
+
+    path = _pt.get_target_dir("data/external/name_list/female_name.txt")
+    with open(path, 'r') as f:
+        lines = f.readlines()
+    female = set()
+    for line in lines:
+        if line == '\n':
+            continue
+        line = line.replace("\n", "")
+        line = line.capitalize()
+        female.add(line)
+
+    # exclusion process
+    # exclude commonly appearing names in surname list and female list
+    male_temp = male.copy()
+    male_temp -= surnames
+    male_temp -= female
+    male_list = list(male_temp)
+    male_list.sort()
+    new_path = _pt.get_target_dir("data/interim/first_names/male_namelist.txt")
+    with open(new_path, 'w') as f:
+        for malename in male_list:
+            f.write(f"{malename}\n")
+
+    # exclusion process
+    # exclude commonly appearing names in surname list and male list
+    female_temp = female.copy()
+
+    female_temp -= surnames
+    female_temp -= male
+    female_list = list(female_temp)
+    female_list.sort()
+    new_path = _pt.get_target_dir("data/interim/first_names/female_namelist.txt")
+    with open(new_path, 'w') as f:
+        for femalename in female_list:
+            f.write(f"{femalename}\n")
 
 
 def format_llm_ss(file:list="all"):
@@ -229,4 +322,4 @@ def format_llm_ss(file:list="all"):
 
 
 if __name__ == '__main__':
-    format_hypocorisms(reverse=False)
+    format_first_names()

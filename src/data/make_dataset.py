@@ -87,7 +87,8 @@ def format_human_ss(file:list="all"):
 
 
 def get_namelists():
-    male_path = _pt.get_target_dir("data/external/name_list/male_name.txt")
+
+    male_path = _pt.get_target_dir("data/interim/first_names/male_namelist.txt")
 
     with open(male_path, 'r') as f:
         male_lines = f.readlines()
@@ -96,7 +97,7 @@ def get_namelists():
     # put the list in a set to do hash search in the future
     male_names = set(male_lines)
 
-    female_path = _pt.get_target_dir("data/external/name_list/female_name.txt")
+    female_path = _pt.get_target_dir("data/interim/first_names/female_namelist.txt")
     with open(female_path, 'r') as f:
         female_lines = f.readlines()
     # list of names begins in the line 8 in both the text files
@@ -181,7 +182,7 @@ def get_surnames():
     This returns a set of surnames that also include commonly used first names
     :return:
     """
-    path = _pt.get_target_dir('data/interim/surnames/surnames_large_unique.txt')
+    path = _pt.get_target_dir('data/interim/surnames/surnames_unique.txt')
     with open(path, 'r') as f:
         lines = f.readlines()
     surnames = set()

@@ -105,7 +105,7 @@ class NameParserChecker:
                     # return the part as a correct surname
                     return part, c
             # if no such part, return last, denoting that the full name has unknown last name
-            return last, None
+        return last, None
 
     def as_dict(self):
         return self._name_parsed
