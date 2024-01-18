@@ -24,3 +24,4 @@ _notes
 /notebooks/
 src/models/test.py
 /models/
+.props

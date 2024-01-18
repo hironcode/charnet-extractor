@@ -6,7 +6,7 @@ from src.tools.path_tools import PathTools
 _pt = PathTools()
 import re
 
-def format_llm_ss(file:list="all"):
+def format_llm_ss(file:list="all") -> dict:
     texts = {}
 
     # dir_path = os.path.realpath(__file__)   # User/username/..../RootFolder/src/data/make_dataset.py
@@ -32,19 +32,25 @@ def format_llm_ss(file:list="all"):
         with open(path, 'r') as f:
             textlines = f.readlines()
 
+        # format title, removing the extension
+        title = title.split(".")[0]
+
         # initialize the dict
         texts[title] = ""
         for line in textlines:
             # if the line is just a newline command, remove it from the text
-            if line == "\n":
+            if line == '\n':
                 continue
-            elif line == "---":
+
+            if re.search("---", line):
                 continue
-            elif re.search(r"<c\d+>", line):
-                continue
+            # elif re.search(r"<c\d+>", line):
+            #     continue
+
             # replace specified signs with a corresponding str
-            for key, val in signs.items():
-                line = line.replace(key, val)
+            if not re.search(r"<c\d+>", line):
+                for key, val in signs.items():
+                    line = line.replace(key, val)
             texts[title] += line
     return texts
 

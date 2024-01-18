@@ -11,7 +11,6 @@ from src.data import make_dataset
 class GenderAnnotation:
     def __init__(self, nlp, doc, chars:defaultdict):
         """
-        :param chars: the defalut dictionary generated in CharacterIdentification. Vulnerable to format change.
         """
 
         self.nlp = nlp

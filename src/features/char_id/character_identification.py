@@ -26,29 +26,34 @@ from unionfind import unionfind
 # import local files
 from src.data import make_dataset
 from src.features.char_id._gender_annotation import GenderAnnotation
-from src.features.char_id._unify_occurences import OccurenceUnification
+from src.features.char_id._unify_occurences import OccurrenceUnification
 from src.tools.character_entity import Character
-from src.models import model_saver
+from src.models import mbank
 from src.tools.character_grouping import CharacterGrouping
 
 
 class CharacterIdentification:
-    def __init__(self, text, title):
-        # set format: {name: Character Class}
-        self.title = title
+    def __init__(self, nlp, doc):
+        # set format: {name: Character}
         self.chars = None
-        model = "en_core_web_trf"
-        self.nlp = spacy.load(model)
+        self.occurrences = None
+        self.nlp = nlp
+        self.doc = doc
 
-        # load doc object
-        model_path = model_saver.get_spacy_doc_path(title, doc_type=model.replace("en_core_web_", ""))
-        if model_saver.exists(model_path):
-            self.doc = model_saver.get_model(model_path)
-            print('Pickled model exists!')
-        else:
-            self.doc = self.nlp(text)
-            model_saver.save_model(model_path, self.doc)
-            print("iPckled model didn't exist. Pickled a model.")
+    def get_characters_occurrences(self) -> ({str: Character}, [list]):
+        self.detect_characters()
+        print("Character Detection is done\n"
+              "===============================================")
+
+        self.annotate_gender()
+        print("Gender Annotation is done\n"
+              "===============================================")
+
+        self.unify_occurrences()
+        print("Occurrence Unification is done\n"
+              "===============================================")
+
+        return self.chars, self.occurrences
 
     def detect_characters(self):
         """
@@ -111,7 +116,6 @@ class CharacterIdentification:
         if self.chars is None:
             raise ValueError(f"self.chars has not defined yet. Run detect_characters first.")
         # initialize the GenderAnnotation class upon defining self.char
-        # super().__init__(self.nlp, self.doc, self.chars)
         ga = GenderAnnotation(self.nlp, self.doc, self.chars)
 
         name_genders_title = ga.annotate_gender_by_titles_simple()
@@ -134,7 +138,6 @@ class CharacterIdentification:
             genders = [gender_t, gender_n]
             size = len(genders)
             size -= genders.count("UNKNOWN")
-            print(name, size, gender_p)
 
             # the pronoun approach is quite unstable
             # use the pronoun approach only if the first two gender approaches cannot identify a gender
@@ -164,7 +167,7 @@ class CharacterIdentification:
         else:
             return True
 
-    def unify_occurences(self) -> [tuple]:
+    def unify_occurrences(self) -> [tuple]:
         """
         Rules (https://aclanthology.org/D15-1088/)
         Two vertices cannot be merged if
@@ -175,10 +178,10 @@ class CharacterIdentification:
         """
         if self.chars is None:
             raise ValueError(f"self.chars has not defined yet. Run detect_characters first.")
-        ou = OccurenceUnification(self.chars)
+        ou = OccurrenceUnification(self.chars)
         referents = ou.unify_referents()
 
-        # merge occurences
+        # merge occurrences
         same_chars = {}
         # check through if each referent exists in the story (or self.chars)
         chars_all = set(self.chars.keys())
@@ -240,20 +243,20 @@ class CharacterIdentification:
         # unite a consistent but repeated reference with the most frequent one
         for ref, names in repeated_referents.items():
             max_name = names[0]
-            max_occurences = 0
-            # fetch refering names of each referent and get the char name of the maximum occurences
+            max_occurrence = 0
+            # fetch referring names of each referent and get the char name of the maximum occurrences
             for name in names:
                 occ = len(self.chars[name].occurences)
-                if occ > max_occurences:
+                if occ > max_occurrence:
                     max_name = name
-                    max_occurences = occ
+                    max_occurrence = occ
             char_groups.unite(ref, max_name)
 
         # merge each pair of names if they share the same gender or their titles are consistent
         # assign a name that potentially refers to different characters to the most frequent name too
         # Mr. Holmes -> Sherlock Holmes or Mycroft Holmes -> assign Sherlock as more frequent than Mycroft
         charlist = list(self.chars.keys())
-        correnspondence = defaultdict(list)
+        correspondence = defaultdict(list)
 
         for i, char1 in enumerate(charlist[:-1]):
             first1 = self.chars[char1].name_parsed.first
@@ -279,21 +282,21 @@ class CharacterIdentification:
                     continue
 
                 if first1 == first2 or last1 == last2:
-                    correnspondence[char1].append(char2)
-                    correnspondence[char2].append(char1)
+                    correspondence[char1].append(char2)
+                    correspondence[char2].append(char1)
 
         # assign a name that potentially refers to different characters to the most frequent name too
         # Mr. Holmes -> Sherlock Holmes or Mycroft Holmes -> assign Sherlock as more frequent than Mycroft
         # unite a consistent but repeated reference with the most frequent one
-        for char1, char2s in correnspondence.items():
+        for char1, char2s in correspondence.items():
             max_name = char2s[0]
-            max_occurences = 0
+            max_occurrence = 0
             # fetch refering names of each referent and get the char name of the maximum occurences
             for name in char2s:
                 occ = len(self.chars[name].occurences)
-                if occ > max_occurences:
+                if occ > max_occurrence:
                     max_name = name
-                    max_occurences = occ
+                    max_occurrence = occ
             char_groups.unite(char1, max_name)
-
+        self.occurrences = char_groups.groups()
         return char_groups.groups()

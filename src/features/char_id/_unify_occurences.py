@@ -28,7 +28,7 @@ Two vertices cannot be merged if
 """
 
 
-class OccurenceUnification:
+class OccurrenceUnification:
     """
     This class tries to unify different referents to the same character.
     At the end of the main unify_occurences method, the class returns
