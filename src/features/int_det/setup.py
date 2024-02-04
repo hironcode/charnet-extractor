@@ -11,7 +11,7 @@ def initServer(text, warning=True):
                       "Refer to this document: https://stanfordnlp.github.io/stanza/client_setup.html")
     with CoreNLPClient(
             annotators=['tokenize', 'ssplit', 'pos', 'lemma', 'ner', 'parse', 'depparse', 'coref'],
-            timeout=30000,
+            timeout=150000,
             memory='6G') as client:
         ann = client.annotate(text)
         return ann

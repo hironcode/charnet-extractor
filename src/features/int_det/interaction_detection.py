@@ -2,6 +2,8 @@
 # import libraries
 import spacy
 from spacy.tokens.doc import Doc
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+import math
 
 # import local files
 from src.features.int_det import setup
@@ -10,14 +12,54 @@ from src.features.int_det import setup
 # Stanza: https://stanfordnlp.github.io/stanza/
 
 class InteractionDetection:
-    def __init__(self, spacy_nlp: spacy.language.Language, spacy_doc: Doc, text):
-        self.ann = setup.initServer(text)
-        self.nlp = spacy_nlp
-        self.doc = spacy_doc
-        # because of the StanfordCoreNLP capacity problem and for narrative-unit-based sentiment analysis,
-        # butch processing is needed
+    def __init__(self,
+                 spacy_nlp: dict[int: spacy.language.Language],
+                 spacy_doc: dict[int: Doc],
+                 unit_size_percentile: float = 0.05
+                 ) -> None:
+        """
+        :param spacy_nlp: spacy.language.Language object of a text
+        :param spacy_doc: spacy.tokens.doc.Doc object of a text
+        :param unit_size_percentile: the relative sentence size of each narrative unit against the number of tokens of
+        the whole text. The smaller the better, since the large unit size may overlook quick change in sentiment in the
+        story.
+        """
 
-    def get_coref(self):
+        # self.ann = setup.initServer(text)
+        self.nlps = spacy_nlp
+        self.docs = spacy_doc
+        self.narrative_units = self.initialize_narrative_units(unit_size_percentile)
+        self.polarities = None
+
+    def initialize_narrative_units(self, unit_size_percentile: float):
+        narrative_units = dict()
+
+        all_token_num = 0
+        for doc in self.docs.values():
+            all_token_num += len(doc)
+        each_unit_token_num = math.ceil(all_token_num * unit_size_percentile)
+
+        # index of each narrative unit
+        unit_idx = 0
+        # separate token index is necessary to keep track of the number of tokens across different Doc objects
+        sent_idx = 0
+        # string object that stores the actual text of each narrative unit
+        narrative = ''
+
+        for doc in enumerate(self.docs.values()):
+            doc: Doc
+            for sent in doc.sents:
+                sent_idx += 1
+                narrative += sent.text + " "
+                if sent_idx == each_unit_token_num:
+                    narrative_units[unit_idx] = narrative
+                    narrative = ""
+                    unit_idx += 1
+        # add the last remaining sentences to the dictionary
+        narrative_units[unit_idx] = narrative
+        return narrative_units
+
+    def get_coref_stanfordCoreNLP(self):
         # reference:
         # https://stackoverflow.com/questions/62735456/understanding-and-using-coreference-resolution-stanford-nlp-tool-in-python-3-7
         chain = self.ann.corefChain
@@ -47,8 +89,25 @@ class InteractionDetection:
             chain_dict[k]['coreferences'] = ref_list
         return chain_dict
 
-    def analyze_sentiment(self):
+    def get_coref_spacy(self) -> list[list[spacy.tokens.token.Token]]:
+        """
+        Get coreference resolution using spacy Coreference Resolver
+        :return: list[spacy.Token]
+        """
+        return
+
+    def analyze_sentiment(self) -> dict[int: dict[str: float]]:
         """
         Return the sentiment of each character
         :return:
         """
+        analyzer = SentimentIntensityAnalyzer()
+        polarities = dict()
+        for idx, text in self.narrative_units.items():
+            polarity = analyzer.polarity_scores(text)
+            polarities[idx] = polarity
+        self.polarities = polarities
+        return polarities
+
+    def count_conversation(self):
+        pass

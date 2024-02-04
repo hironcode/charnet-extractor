@@ -40,24 +40,47 @@ class CharacterIdentification:
         self.nlp = nlp
         self.doc = doc
 
-    def get_characters_occurrences(self) -> ({str: Character}, [list]):
-        self.detect_characters()
+    def run(self) -> (dict[str: Character], list[list]):
+        """
+        :return: a dictionary of character names (keys) and Character classes (values) and a list of co-occurrences
+        """
+        self.chars = self.detect_characters()
         print("Character Detection is done\n"
               "===============================================")
 
-        self.annotate_gender()
+        self.chars = self.annotate_gender(self.chars)
         print("Gender Annotation is done\n"
               "===============================================")
 
-        self.unify_occurrences()
+        self.occurrences = self.unify_occurrences(self.chars)
         print("Occurrence Unification is done\n"
+              "===============================================")
+
+        self.chars = self.assign_id(self.chars, self.occurrences)
+        print("ID Assignment is done\n"
               "===============================================")
 
         return self.chars, self.occurrences
 
+    def assign_id(self, chars: dict[str:Character], occurrences: list[list]) -> dict[str:Character]:
+        """
+        Assign an id to each character
+        :param chars: a dictionary of character names (keys) and Character classes (values)
+        :param occurrences: a list of co-occurrences
+        :return: a dictionary of character names (keys) and Character classes (values) with id annotated
+        """
+        id = 0
+        for occ in occurrences:
+            for name in occ:
+                chars[name].character_id = id
+            id += 1
+        return chars
+
+
     def detect_characters(self):
         """
         (1) use Named Entitiy Recognition (NER) to identify person entities
+        :return: a dictionary of character names (keys) and Character classes (values)
         """
 
         chars = {}
@@ -92,31 +115,28 @@ class CharacterIdentification:
                     character = Character(name)
                     chars[name] = character
                 chars[name].append_occurences(ent.start)
-        self.chars = chars
         return chars
 
-    def title(self):
-        pass
-
-    def annotate_gender(self):
+    def annotate_gender(self, chars) -> dict[str:Character]:
         """
-        (2) automatically anotate a gender to each entity based on:
-            (a) lists of male first names and female first names
-            (b) titles such as Mr., Mrs., or Lord etc...
-            (c) detecting pronouns such as him, her, his, her, himself, and herself etc...
+        (2) automatically anotate a gender to each entity based on:\n
+            (a) lists of male first names and female first names\n
+            (b) titles such as Mr., Mrs., or Lord etc...\n
+            (c) detecting pronouns such as him, her, his, her, himself, and herself etc...\n
             "a counter keeps track of counts of ‘his’ and ‘himself’ (on the one hand), and of ‘her’ and ‘herself’
-            (on the other) appearing in a window of at most 3 words to the right of the name."
-            https://aclanthology.org/W14-0905/
-        gender options: MALE, FEMALE, UNKNOWN
+            (on the other) appearing in a window of at most 3 words to the right of the name."\n
+            https://aclanthology.org/W14-0905/\n
+        gender options: MALE, FEMALE, UNKNOWN\n
+        :return: a dictionary of character names (keys) and Character classes (values) with gender annotated
         """
 
         """a counter keeps track of counts of ‘his’ and ‘himself’ (on the one hand), and of ‘her’ and ‘herself’
             (on the other) appearing in a win- dow of at most 3 words to the right of the name."""
 
-        if self.chars is None:
+        if chars is None:
             raise ValueError(f"self.chars has not defined yet. Run detect_characters first.")
         # initialize the GenderAnnotation class upon defining self.char
-        ga = GenderAnnotation(self.nlp, self.doc, self.chars)
+        ga = GenderAnnotation(self.nlp, self.doc, chars)
 
         name_genders_title = ga.annotate_gender_by_titles_simple()
         print(f"_annotate_gender_by_titles_simple: "
@@ -130,7 +150,7 @@ class CharacterIdentification:
         print(f"_annotate_gender_by_pronouns:"
               f"{name_genders_pronoun}")
 
-        for name in list(self.chars.keys()):
+        for name in list(chars.keys()):
             gender_t = name_genders_title[name]
             gender_n = name_genders_name[name]
             gender_p = name_genders_pronoun[name]
@@ -144,17 +164,17 @@ class CharacterIdentification:
 
             # if all the genders in the list are UNKNOWN
             if size == 0:
-                self.chars[name].update_gender(gender_p)
+                chars[name].update_gender(gender_p)
             # if all the specified genders in the list are FEMALE
             elif genders.count("FEMALE") == size:
-                self.chars[name].update_gender("FEMALE")
+                chars[name].update_gender("FEMALE")
             # if all the specified genders in the list are MALE
             elif genders.count("MALE") == size:
-                self.chars[name].update_gender("MALE")
+                chars[name].update_gender("MALE")
             # if the two of the elements are FEMALE and MALE or all undefined
             else:
-                self.chars[name].update_gender(gender_p)
-        return self.chars
+                chars[name].update_gender(gender_p)
+        return chars
 
     def _gender_unmatch(self, gender1, gender2):
         genders = [gender1, gender2]
@@ -167,24 +187,28 @@ class CharacterIdentification:
         else:
             return True
 
-    def unify_occurrences(self) -> [tuple]:
+    def unify_occurrences(self, chars) -> list[list]:
         """
-        Rules (https://aclanthology.org/D15-1088/)
-        Two vertices cannot be merged if
-        (1) the inferred genders of both names differ,
-        (2) both names share a common surname but different first names, or
-        (3) the honorific of both names differ, e.g., “Miss” and “Mrs.”
+        Rules (https://aclanthology.org/D15-1088/)\n
+        Two vertices cannot be merged if\n
+        (1) the inferred genders of both names differ,\n
+        (2) both names share a common surname but different first names, or\n
+        (3) the honorific of both names differ, e.g., “Miss” and “Mrs.”\n
         :return: list representation of networkX nodes/edges
         """
-        if self.chars is None:
-            raise ValueError(f"self.chars has not defined yet. Run detect_characters first.")
-        ou = OccurrenceUnification(self.chars)
+        if chars is None:
+            raise ValueError(f"chars has not defined yet. Run detect_characters first.")
+        for char in chars.values():
+            if char.gender == "GENDER UNDEFINED":
+                raise ValueError(f"annotate gender first by running annotate_gender method.")
+
+        ou = OccurrenceUnification(chars)
         referents = ou.unify_referents()
 
         # merge occurrences
         same_chars = {}
         # check through if each referent exists in the story (or self.chars)
-        chars_all = set(self.chars.keys())
+        chars_all = set(chars.keys())
 
         """possible to make this part faster"""
         # for each character name
@@ -198,17 +222,17 @@ class CharacterIdentification:
         # filter referents that do not meet gender or title consistency
         to_remove = []
         for name, refs in same_chars.items():
-            gender1 = self.chars[name].gender
+            gender1 = chars[name].gender
             for ref in refs:
                 # if the characters' genders do not match, they are different characters
                 # UNKNOWNは許容する
-                gender2 = self.chars[ref].gender
+                gender2 = chars[ref].gender
                 if self._gender_unmatch(gender1, gender2):
                     to_remove.append((name, ref))
 
                 # if both have a title, but they do not match, they are two separate characters
-                title1: str = self.chars[name].name_parsed.title
-                title2: str = self.chars[ref].name_parsed.title
+                title1: str = chars[name].name_parsed.title
+                title2: str = chars[ref].name_parsed.title
                 if (title1 != '' and title2 != '') and (title1 != title2):
                     to_remove.append((name, ref))
                 # otherwise, they are the same character
@@ -232,7 +256,7 @@ class CharacterIdentification:
             repeated_referents.pop(ref)
 
         # use union-find algorithm to cluster separate names to each group
-        char_groups = CharacterGrouping(list(self.chars.keys()))
+        char_groups = CharacterGrouping(list(chars.keys()))
         for name, refs in same_chars.items():
             for ref in refs:
                 # if a referent is repeated, skip it
@@ -246,7 +270,7 @@ class CharacterIdentification:
             max_occurrence = 0
             # fetch referring names of each referent and get the char name of the maximum occurrences
             for name in names:
-                occ = len(self.chars[name].occurences)
+                occ = len(chars[name].occurences)
                 if occ > max_occurrence:
                     max_name = name
                     max_occurrence = occ
@@ -255,27 +279,27 @@ class CharacterIdentification:
         # merge each pair of names if they share the same gender or their titles are consistent
         # assign a name that potentially refers to different characters to the most frequent name too
         # Mr. Holmes -> Sherlock Holmes or Mycroft Holmes -> assign Sherlock as more frequent than Mycroft
-        charlist = list(self.chars.keys())
+        charlist = list(chars.keys())
         correspondence = defaultdict(list)
 
         for i, char1 in enumerate(charlist[:-1]):
-            first1 = self.chars[char1].name_parsed.first
-            last1 = self.chars[char1].name_parsed.last
-            title1: str = self.chars[char1].name_parsed.title
+            first1 = chars[char1].name_parsed.first
+            last1 = chars[char1].name_parsed.last
+            title1: str = chars[char1].name_parsed.title
             l1 = [first1, last1, title1]
             if l1.count('') >= 2:
                 continue
 
             for char2 in charlist[i+1:]:
-                first2 = self.chars[char2].name_parsed.first
-                last2 = self.chars[char2].name_parsed.last
-                title2: str = self.chars[char2].name_parsed.title
+                first2 = chars[char2].name_parsed.first
+                last2 = chars[char2].name_parsed.last
+                title2: str = chars[char2].name_parsed.title
                 l2 = [first2, last2, title2]
                 if l2.count('') >= 2:
                     continue
 
                 # if the characters' genders do not match, they are different characters
-                if self.chars[char1].gender != self.chars[char2].gender:
+                if chars[char1].gender != chars[char2].gender:
                     continue
                 # if both have a title, but they do not match, they are two separate characters
                 if (title1 != '' and title2 != '') and (title1 != title2):
@@ -293,10 +317,9 @@ class CharacterIdentification:
             max_occurrence = 0
             # fetch refering names of each referent and get the char name of the maximum occurences
             for name in char2s:
-                occ = len(self.chars[name].occurences)
+                occ = len(chars[name].occurences)
                 if occ > max_occurrence:
                     max_name = name
                     max_occurrence = occ
             char_groups.unite(char1, max_name)
-        self.occurrences = char_groups.groups()
         return char_groups.groups()

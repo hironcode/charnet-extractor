@@ -13,7 +13,6 @@ class PathTools:
 
     def get_target_dir(self, target_path:str) -> Path:
         """
-        :param file_data: __file__ object
         :param target_path: the path of the target directory or file from the root directory
         :return: absolute path of the target
         """
