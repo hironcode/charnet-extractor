@@ -13,8 +13,8 @@ from src.features.int_det import setup
 
 class InteractionDetection:
     def __init__(self,
-                 spacy_nlp: dict[int: spacy.language.Language],
-                 spacy_doc: dict[int: Doc],
+                 spacy_nlps: dict[int: spacy.language.Language],
+                 spacy_docs: dict[int: Doc],
                  unit_size_percentile: float = 0.05
                  ) -> None:
         """
@@ -26,17 +26,23 @@ class InteractionDetection:
         """
 
         # self.ann = setup.initServer(text)
-        self.nlps = spacy_nlp
-        self.docs = spacy_doc
-        self.narrative_units = self.initialize_narrative_units(unit_size_percentile)
+        self.nlps = spacy_nlps
+        self.docs = spacy_docs
+        self.narrative_units = self.initialize_narrative_units(unit_size_percentile, self.docs)
+        self.nlp_coref = self.initialize_coref_resolution(None)
         self.polarities = None
 
-    def initialize_narrative_units(self, unit_size_percentile: float):
+    def initialize_narrative_units(self,
+                                   unit_size_percentile: float,
+                                   docs: dict[int: Doc]
+                                   ) -> dict[int: spacy.language.Language]:
         narrative_units = dict()
 
+        # calculate the total number of tokens in the text
         all_token_num = 0
-        for doc in self.docs.values():
+        for doc in docs.values():
             all_token_num += len(doc)
+        # calculate the number of tokens for each narrative unit
         each_unit_token_num = math.ceil(all_token_num * unit_size_percentile)
 
         # index of each narrative unit
@@ -58,6 +64,18 @@ class InteractionDetection:
         # add the last remaining sentences to the dictionary
         narrative_units[unit_idx] = narrative
         return narrative_units
+
+    def initialize_coref_resolution(self, nlps: dict[int: spacy.language.Language]) -> spacy.language.Language:
+        nlp_coref = spacy.load("en_coreference_web_trf")
+
+        # use replace_list to replace the coref clusters with the head of the cluster
+        nlp_coref.replace_listeners("transformer", "coref", ["model.tok2vec"])
+        nlp_coref.replace_listeners("transformer", "span_resolver", ["model.tok2vec"])
+
+        # we won't copy over the span cleaner
+        nlp.add_pipe("coref", source=nlp_coref)
+        nlp.add_pipe("span_resolver", source=nlp_coref)
+        return nlp
 
     def get_coref_stanfordCoreNLP(self):
         # reference:
@@ -94,6 +112,7 @@ class InteractionDetection:
         Get coreference resolution using spacy Coreference Resolver
         :return: list[spacy.Token]
         """
+
         return
 
     def analyze_sentiment(self) -> dict[int: dict[str: float]]:

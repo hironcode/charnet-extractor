@@ -19,7 +19,7 @@ class CharacterNetwork(nx.Graph):
         self.chars = chars
         self.interactions = interactions
 
-    def initialize(self) -> nx.Graph:
+    def initialize(self) -> None:
         """
         Initialize the character network based on the provided character list (nodes) and interactions (weighted edges)
         :return:

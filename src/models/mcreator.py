@@ -4,8 +4,8 @@ from src.models import mbank
 
 
 def create_spacy_model(
-        title,
-        text,
+        title: str,
+        text: str,
         model="en_core_web_trf",
         save_update:bool=False
     ) -> (spacy.language.Language, "spacy.tokens.doc.Doc"):
@@ -16,6 +16,7 @@ def create_spacy_model(
     :param model: type of model to use
     :return:
     """
+
     nlp = spacy.load(model)
     # add pipeline for sentiment analysis
     # nlp.add_pipe("spacytextblob")
@@ -31,17 +32,6 @@ def create_spacy_model(
     # Add the special cases to the tokenizer
     for tag in tags:
         nlp.tokenizer.add_special_case(f"[{tag}]", [{"ORTH": f"[{tag}]"}])
-
-    # add coreference resolution
-    nlp_coref = spacy.load("en_coreference_web_trf")
-
-    # use replace_list to replace the coref clusters with the head of the cluster
-    nlp_coref.replace_listeners("transformer", "coref", ["model.tok2vec"])
-    nlp_coref.replace_listeners("transformer", "span_resolver", ["model.tok2vec"])
-
-    # we won't copy over the span cleaner
-    nlp.add_pipe("coref", source=nlp_coref)
-    nlp.add_pipe("span_resolver", source=nlp_coref)
 
     # load doc object
     model_path = mbank.get_spacy_doc_path(title, doc_type=model.replace("en_core_web_", ""))
