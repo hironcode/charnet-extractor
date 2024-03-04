@@ -1,5 +1,6 @@
 import spacy
 from src.models import mbank
+from spacy.tokens.doc import Doc
 # from spacytextblob.spacytextblob import SpacyTextBlob
 
 
@@ -8,7 +9,7 @@ def create_spacy_model(
         text: str,
         model="en_core_web_trf",
         save_update:bool=False
-    ) -> (spacy.language.Language, "spacy.tokens.doc.Doc"):
+    ) -> (spacy.language.Language, Doc):
     """
     Create a spacy model and return it
     :param title: title of the story

@@ -26,8 +26,8 @@ from unionfind import unionfind
 # import local files
 from src.data import make_dataset
 from src.features.char_id._gender_annotation import GenderAnnotation
-from src.features.char_id._unify_occurences import OccurrenceUnification
-from src.tools.character_entity import Character
+from src.features.char_id._occurrence_unification import OccurrenceUnification
+from src.tools.character import Character
 from src.models import mbank
 from src.tools.character_grouping import CharacterGrouping
 
@@ -72,7 +72,7 @@ class CharacterIdentification:
         id = 0
         for occ in occurrences:
             for name in occ:
-                chars[name].character_id = id
+                chars[name].id = id
             id += 1
         return chars
 

@@ -1,5 +1,5 @@
 import networkx as nx
-from src.tools.character_entity import Character
+from src.tools.character import Character
 
 class CharacterNetwork(nx.Graph):
     def __init__(self,

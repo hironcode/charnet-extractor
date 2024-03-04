@@ -7,7 +7,7 @@ class Character:
         self.name_parsed = NameParserChecker(name)
         self.gender = "GENDER UNDEFINED"
         self.occurences = []
-        self.character_id = None
+        self.id = None
 
         # self.possible_referents = self.getPossibleRerefents()
 

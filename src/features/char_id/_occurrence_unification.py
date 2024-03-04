@@ -1,7 +1,7 @@
 # import libraries
 import collections
 
-import src.tools.character_entity
+import src.tools.character
 # import local files
 from src.data import make_dataset
 import itertools
@@ -105,7 +105,7 @@ class OccurrenceUnification:
             else:
                 yield el
 
-    def get_possible_referent(self, character:src.tools.character_entity.Character):
+    def get_possible_referent(self, character:src.tools.character.Character):
         """
         reference: https://aclanthology.org/W14-0905/
         """
