@@ -22,6 +22,7 @@ import spacy
 from spacy.matcher import Matcher
 from collections import defaultdict
 from unionfind import unionfind
+from wasabi import msg
 
 # import local files
 from src.data import make_dataset
@@ -45,20 +46,20 @@ class CharacterIdentification:
         :return: a dictionary of character names (keys) and Character classes (values) and a list of co-occurrences
         """
         self.chars = self.detect_characters()
-        print("Character Detection is done\n"
-              "===============================================")
+        msg.good("Character Detection is done\n")
+        msg.good("="*50)
 
         self.chars = self.annotate_gender(self.chars)
-        print("Gender Annotation is done\n"
-              "===============================================")
+        msg.good("Gender Annotation is done\n")
+        msg.good("=" * 50)
 
         self.occurrences = self.unify_occurrences(self.chars)
-        print("Occurrence Unification is done\n"
-              "===============================================")
+        msg.good("Occurrence Unification is done\n")
+        msg.good("=" * 50)
 
         self.chars = self.assign_id(self.chars, self.occurrences)
-        print("ID Assignment is done\n"
-              "===============================================")
+        msg.good("ID Assignment is done\n")
+        msg.good("="*50)
 
         return self.chars, self.occurrences
 
