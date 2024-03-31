@@ -7,6 +7,7 @@ from collections import defaultdict
 from spacy.matcher import Matcher
 import json
 from wasabi import msg
+import re
 
 # import local files
 from src.features.int_det import setup
@@ -42,6 +43,7 @@ class InteractionDetection:
         self.polarities = None
         self.chars = chars
         self.narrative_units = None
+        self.conv_tracker = {}
 
     def run(self):
         # initialize the narrative units
@@ -241,10 +243,7 @@ class InteractionDetection:
         with open(st_path.joinpath("narrative_units.json"), "w") as f:
             json.dump(self.narrative_units, f)
 
-
-
-
-    def analyze_sentiment(self, narrative_units) -> defaultdict[int: dict[str: dict[str: float]]]:
+    def get_sentiment(self, narrative_units) -> defaultdict[int: dict[str: dict[str: float]]]:
         """
         add sentiment polarity to each narrative unit
         :return:
@@ -257,37 +256,95 @@ class InteractionDetection:
             narrative_units[i]["polarity"] = polarity
         return narrative_units
 
-    def detect_conversations(self,
-                             narrative_units: defaultdict[int: dict],
-                             chars: dict[str: src.tools.character.Character],
+    def get_conversations(self, nlp, doc):
+        # detect conversations and its indexes
+        tracker = self.find_conversations(nlp, doc)
+
+        # find the speaker and addressee of each conversation
+        for i, val in tracker.items():
+            # get the speaker and addressee
+            speaker, addressee = self.identify_sp_ad_sent(doc, val)
+            tracker[i]["speaker"] = speaker
+            tracker[i]["addressee"] = addressee
+
+
+
+    def find_conversations(self,
                              nlp: spacy.language.Language,
                              doc: spacy.tokens.doc.Doc,
                              ) -> dict[dict[str: str]: int]:
         """
         Detect every conversation in the narrative units
-        :param narrative_units: narrative units of the story
-        :param chars: dictionary of character names and Character objects
-        :param tracker: dictionary whose keys are speaker and lister names and
         :param nlp: spacy language object
+        :param doc: spacy.tokens.doc.Doc object
         :return:
         """
-        matcher = Matcher(nlp.vocab)
         # reference:
         # https://op.europa.eu/en/web/eu-vocabularies/formex/physical-specifications/character-encoding/quotation-marks
         # spacy does not tokenize and single out an apostrophe and Matcher is a token-based algorithm
         # So we do not consider a case where the matcher picks an apostrophe used for a contraction
 
-        quo_start = ["\u0022", "\u0027", "\u0060", "\u00AB", "\u2018", "\u201B", "\u201C", "\u201F", "\u2039"]
-        quo_end = ["\u0022", "\u0027", "\u00B4","\u00BB", "\u2019", "\u201A", "\u201D", "\u201E", "\u203A"]
-        
-        pattern = [
-            {"TEXT": {"IN": quo_start}},
-            {"IS_ASCII": True, "ORTH": {"NOT_IN": ['']}},
-            {"TEXT": {"IN": quo_end}},
-        ]
-        matcher.add("CONVERSATION", [pattern], greedy="LONGEST")
-        for i in range(len(narrative_units)):
-            pass
+        quo_start = ["\u0022", "\u0027", "\u0060", "\u00AB", "\u2018", "\u201C", "\u2039"]
+        quo_end = ["\u0022", "\u0027", "\u00B4", "\u00BB", "\u2019", "\u201D", "\u203A"]
+        pattern = r''
+        for start, end in zip(quo_start, quo_end):
+            pattern += f"{start}.*?{end}|"
+        pattern = rf"({pattern})"
 
-    def count_conversations(self):
-        pass
+        # すべてのマッチを見つける
+        re_matches = re.findall(pattern, doc.text)
+        num = 0
+        tracker = {}
+        for match in re_matches:
+            if match == "":
+                continue
+            tracker[num] = dict()
+            tracker[num]["quote"] = match
+
+        done = []
+        for sent in list(doc.sents):
+            for i, match in tracker.items():
+                if i in done:
+                    continue
+                match = match["quote"]
+                if match not in sent.text:
+                    continue
+                quote_start, quote_end = None, None
+                for token in sent:
+                    if token.text == match[0] and quote_start is None:
+                        quote_start = token.i
+                    elif token.text == match[-1]:
+                        quote_end = token.i
+                tracker[i]["sent"] = sent
+                tracker[i]["sent start"] = sent.start
+                tracker[i]["sent end"] = sent.end
+                tracker[i]["quote start"] = quote_start
+                tracker[i]["quote end"] = quote_end
+                done.append(i)
+            if len(done) == len(tracker):
+                break
+        return tracker
+
+    def identify_sp_ad_sent(self, doc, tracker: dict[str]) -> dict[str: dict[str, int]]:
+        """
+        Identify the speaker and addressee of a conversation
+        :param doc: spacy.tokens.doc.Doc object
+        :param tracker: an instance of the tracker dictionary
+        :return: dictionary of speaker and addressee as a spacy token object
+        """
+        # get the speaker and addressee
+        speaker = None
+        addressee = None
+        # get the speaker and addressee
+        for token in doc[tracker["sent start"]:tracker["sent end"]]:
+            msg.info(f"{token.text} のdependencyは…  {token.dep_}だよ！")
+            if token.dep_ == "nsubj" and (token.i < tracker['quote start'] or tracker['quote end'] < token.i):
+                speaker = token
+            elif token.dep_ == "dobj" or token.dep_ == "pobj" and (
+                    token.i < tracker['quote start'] or tracker['quote end'] < token.i):
+                addressee = token
+        return {"speaker": speaker, "addressee": addressee}
+
+    def identify_sp_ad_context(self, doc, tracker):
+        for quote in tracker.values():
+            pass
