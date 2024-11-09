@@ -6,6 +6,7 @@ import string
 from collections import defaultdict
 from src.tools.path_tools import PathTools
 from src.data import make_dataset
+import pandas as pd
 
 _pt = PathTools()
 
@@ -283,43 +284,10 @@ def format_first_names():
         for femalename in female_list:
             f.write(f"{femalename}\n")
 
-
-def format_llm_ss(file:list="all"):
-    texts = {}
-
-    dir_path = _pt.get_target_dir("data/raw/llm_ss")
-
-    if file == "all":
-        titles = [
-            f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))
-        ]
-    else:
-        titles = file
-
-    # signs to remove and alternative string to be replaced to
-    signs = {
-        "\n": " ",
-        "\t": "",
-    }
-
-    for title in titles:
-        path = os.path.join(dir_path, title)
-        with open(path, 'r') as f:
-            textlines = f.readlines()
-
-        # initialize the dict
-        texts[title] = ""
-        for line in textlines:
-            # if the line is a separate line, remove it
-            if line == "---":
-                continue
-
-            # replace specified signs with a corresponding str
-            for key, val in signs.items():
-                line = line.replace(key, val)
-            texts[title] += line
-    return texts
-
+def format_human_ss_csv(path):
+    df = pd.read_csv(path)
+    print(df.head())
 
 if __name__ == '__main__':
-    format_first_names()
+    path = _pt.get_target_dir("data/external/human_ss/stories.csv")
+    format_human_ss_csv(path)

@@ -20,7 +20,7 @@ def save_model(path, model) -> None:
         pickle.dump(model, f)
 
 
-def get_spacy_doc_path(story_title, doc_type="trf"):
+def get_spacy_doc_path(story_title:str, doc_type:str="trf") -> Path:
     """
     Concatenate a path to a spacy model directory and a given title of a story and return an absolute path to the pickle
     :param story_title: title of story

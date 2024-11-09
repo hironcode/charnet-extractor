@@ -23,12 +23,13 @@ from spacy.matcher import Matcher
 from collections import defaultdict
 from unionfind import unionfind
 from wasabi import msg
+from typing import Tuple
 
 # import local files
 from src.data import make_dataset
 from src.features.char_id._gender_annotation import GenderAnnotation
 from src.features.char_id._occurrence_unification import OccurrenceUnification
-from src.tools.character import Character
+from src.tools.character import Character, AllCharacters
 from src.models import mbank
 from src.tools.character_grouping import CharacterGrouping
 
@@ -36,16 +37,16 @@ from src.tools.character_grouping import CharacterGrouping
 class CharacterIdentification:
     def __init__(self, nlp, doc):
         # set format: {name: Character}
-        self.chars = None
+        self.chars = AllCharacters({})
         self.occurrences = None
         self.nlp = nlp
         self.doc = doc
 
-    def run(self) -> (dict[str: Character], list[list]):
+    def run(self) -> Tuple[dict[str: Character], list[list]]:
         """
         :return: a dictionary of character names (keys) and Character classes (values) and a list of co-occurrences
         """
-        self.chars = self.detect_characters()
+        self.chars = self.detect_characters(self.chars)
         msg.good("Character Detection is done\n")
         msg.good("="*50)
 
@@ -57,34 +58,18 @@ class CharacterIdentification:
         msg.good("Occurrence Unification is done\n")
         msg.good("=" * 50)
 
-        self.chars = self.assign_id(self.chars, self.occurrences)
-        msg.good("ID Assignment is done\n")
-        msg.good("="*50)
+        # self.chars = self.assign_id(self.chars, self.occurrences)
+        # msg.good("ID Assignment is done\n")
+        # msg.good("="*50)
 
         return self.chars, self.occurrences
 
-    def assign_id(self, chars: dict[str:Character], occurrences: list[list]) -> dict[str:Character]:
-        """
-        Assign an id to each character
-        :param chars: a dictionary of character names (keys) and Character classes (values)
-        :param occurrences: a list of co-occurrences
-        :return: a dictionary of character names (keys) and Character classes (values) with id annotated
-        """
-        id = 0
-        for occ in occurrences:
-            for name in occ:
-                chars[name].id = id
-            id += 1
-        return chars
-
-
-    def detect_characters(self):
+    def detect_characters(self, chars:AllCharacters) -> AllCharacters:
         """
         (1) use Named Entitiy Recognition (NER) to identify person entities
         :return: a dictionary of character names (keys) and Character classes (values)
         """
 
-        chars = {}
         female_titles, male_titles = make_dataset.get_titles()
         titles = female_titles.union(male_titles)
         for i, ent in enumerate(self.doc.ents):
@@ -112,13 +97,14 @@ class CharacterIdentification:
 
                 # create a dictionary index if the name does not exist in the dict yet
                 # the name might have a title
-                if name not in chars.keys():
+                if name not in chars.get_names():
                     character = Character(name)
-                    chars[name] = character
+                    chars.add_character(name, character)
+                    chars.assign_ids()
                 chars[name].append_occurences(ent.start)
         return chars
 
-    def annotate_gender(self, chars) -> dict[str:Character]:
+    def annotate_gender(self, chars: AllCharacters) -> AllCharacters:
         """
         (2) automatically anotate a gender to each entity based on:\n
             (a) lists of male first names and female first names\n
@@ -137,7 +123,7 @@ class CharacterIdentification:
         if chars is None:
             raise ValueError(f"self.chars has not defined yet. Run detect_characters first.")
         # initialize the GenderAnnotation class upon defining self.char
-        ga = GenderAnnotation(self.nlp, self.doc, chars)
+        ga = GenderAnnotation(self.nlp, self.doc, chars.chars)
 
         name_genders_title = ga.annotate_gender_by_titles_simple()
         print(f"_annotate_gender_by_titles_simple: "
@@ -151,7 +137,7 @@ class CharacterIdentification:
         print(f"_annotate_gender_by_pronouns:"
               f"{name_genders_pronoun}")
 
-        for name in list(chars.keys()):
+        for name in chars.get_names():
             gender_t = name_genders_title[name]
             gender_n = name_genders_name[name]
             gender_p = name_genders_pronoun[name]
@@ -164,17 +150,18 @@ class CharacterIdentification:
             # use the pronoun approach only if the first two gender approaches cannot identify a gender
 
             # if all the genders in the list are UNKNOWN
+            id = chars.name_to_id(name)
             if size == 0:
-                chars[name].update_gender(gender_p)
+                chars.update_gender(id, gender_p)
             # if all the specified genders in the list are FEMALE
             elif genders.count("FEMALE") == size:
-                chars[name].update_gender("FEMALE")
+                chars.update_gender(id, "FEMALE")
             # if all the specified genders in the list are MALE
             elif genders.count("MALE") == size:
-                chars[name].update_gender("MALE")
+                chars.update_gender(id, "MALE")
             # if the two of the elements are FEMALE and MALE or all undefined
             else:
-                chars[name].update_gender(gender_p)
+                chars.update_gender(id, gender_p)
         return chars
 
     def _gender_unmatch(self, gender1, gender2):

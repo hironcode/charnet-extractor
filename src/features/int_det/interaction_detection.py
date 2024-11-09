@@ -8,10 +8,13 @@ from spacy.matcher import Matcher
 import json
 from wasabi import msg
 import re
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+import torch.nn.functional as F
 
 # import local files
-from src.features.int_det import setup
-import src.tools.character
+# from src.features.int_det import setup
+from src.tools import character, narrative_units
 from src.tools.path_tools import PathTools
 
 
@@ -23,8 +26,8 @@ class InteractionDetection:
                  title: str,
                  spacy_nlp: spacy.language.Language,
                  spacy_docs: dict[int: Doc],
-                 chars: dict[str: src.tools.character.Character],
-                 unit_size_percentile: float = 0.05,
+                 chars: dict[str: character.Character],
+                 narrative_units: narrative_units.NarrativeUnits,
                  ) -> None:
         """
         :param spacy_nlp: spacy.language.Language object of a text
@@ -39,62 +42,29 @@ class InteractionDetection:
         self.title = title
         self.nlps = spacy_nlp
         self.docs = spacy_docs
-        self.unit_size_percentile = unit_size_percentile
-        self.polarities = None
         self.chars = chars
-        self.narrative_units = None
+        self.narrative_units = narrative_units
         self.conv_tracker = {}
 
-    def run(self):
-        # initialize the narrative units
-        narrative_units = self.initialize_narrative_units(self.unit_size_percentile, self.docs)
+        self.sentiment_analysis_ml_init = False
+    
 
+    def run(self, sentiment_analysis: str="ml", hf_model="finiteautomata/bertweet-base-sentiment-analysis") -> None:
         # create a nlp object for coreference resolution
-        nlp_coref = self.initialize_coref_resolution()
+        # nlp_coref = self.initialize_coref_resolution()
 
         # get clusters for each narrative unit
-        narrative_units_w_clusters = self.get_coref_spacy(narrative_units, nlp_coref)
+        # narrative_units = self.get_coref_spacy(narrative_units, nlp_coref)
 
         # get polarity of each narrative unit
-        narrative_units_w_clusters_polarity = self.analyze_sentiment(narrative_units_w_clusters)
+        if sentiment_analysis == "vader":
+            self.narrative_units = self.get_sentiment_vader(self.narrative_units)
+        elif sentiment_analysis == "ml":
+            self.narrative_units = self.get_sentiment_hugface(self.narrative_units, hf_model)
+        else:
+            raise ValueError("Invalid sentiment analysis method. Choose 'vader' for rule-based or 'ml' for machine learning-based sentiment analysis.")
 
         # conversation
-
-    def initialize_narrative_units(self,
-                                   unit_size_percentile: float,
-                                   docs: dict[int: Doc]
-                                   ) -> defaultdict[int: dict[str: str]]:
-        narrative_units = defaultdict(dict)
-
-        # calculate the total number of tokens in the text
-        all_sent_num = 0
-        for doc in docs.values():
-            all_sent_num += len(list(doc.sents))
-        # calculate the number of tokens for each narrative unit
-        each_unit_sent_num = math.ceil(all_sent_num * unit_size_percentile)
-
-        # index of each narrative unit
-        unit_idx = 0
-        # separate token index is necessary to keep track of the number of tokens across different Doc objects
-        sent_idx = 0
-        # string object that stores the actual text of each narrative unit
-        narrative = ''
-
-        for doc in self.docs.values():
-            doc: Doc
-            for sent in doc.sents:
-                sent_idx += 1
-                narrative += sent.text + " "
-                if sent_idx == each_unit_sent_num:
-                    # add the narrative-unit text to the dictionary
-                    narrative_units[unit_idx]["text"] = narrative
-                    narrative = ""
-                    unit_idx += 1
-                    sent_idx = 0
-        # add the last remaining sentences to the dictionary
-        narrative_units[unit_idx]["text"] = narrative
-        self.narrative_units = narrative_units
-        return narrative_units
 
     def initialize_coref_resolution(self, narrative_units=None) -> spacy.language.Language:
         """for i in range(len(narrative_units)):
@@ -123,36 +93,6 @@ class InteractionDetection:
         nlp.add_pipe("span_resolver", source=nlp_coref)
         return nlp
 
-    def get_coref_stanfordCoreNLP(self):
-        # reference:
-        # https://stackoverflow.com/questions/62735456/understanding-and-using-coreference-resolution-stanford-nlp-tool-in-python-3-7
-        chain = self.ann.corefChain
-        print(type(chain))
-        print(dict(chain))
-        chain_dict = {}
-        for chain_idx, chain in enumerate(chain):
-            chain_dict[chain_idx] = {}
-            chain_dict[chain_idx]['chainID'] = chain.chainID
-            chain_dict[chain_idx]['mentions'] = [{'mentionID': mention.mentionID,
-                                                  'beginIndex': mention.beginIndex,
-                                                  'endIndex': mention.endIndex,
-                                                  'sentenceIndex': mention.sentenceIndex,
-                                                  'ref': '',
-                                                  } for mention in chain.mention]
-
-        for k, coreference in chain_dict.items():
-            ref_list = []
-            for i, mention in enumerate(coreference['mentions']):
-                ref = self.ann.sentence[mention['sentenceIndex']].token[mention['beginIndex']:mention['endIndex']]
-                ref = ' '.join(t.word for t in ref)
-                chain_dict[k]['mentions'][i]['ref'] = ref
-                ref_list.append({
-                    'beginIndex': mention['beginIndex'],
-                    'endIndex': mention['endIndex'],
-                })
-            chain_dict[k]['coreferences'] = ref_list
-        return chain_dict
-
     def get_coref_spacy(self,
                         narrative_units: defaultdict[int: dict],
                         nlp_coref: spacy.language.Language,
@@ -168,14 +108,6 @@ class InteractionDetection:
             doc = nlp_coref(text)
             # for each cluster, get mentions and their start and end indices, entity types, and dependency labels
             clusters = dict()
-            # clusters = {cluster_idx: {
-            #     mention.text: {
-            #         "start": mention.start,
-            #         "end": mention.end,
-            #         "ent_type_": [tok.ent_type_ for tok in mention],
-            #         "dep_": [tok.dep_ for tok in mention],
-            #     }
-            # } for cluster_idx, cluster in doc.spans.items() for mention in cluster}
             for cluster_idx, cluster in doc.spans.items():
                 clusters[cluster_idx] = dict()
                 for mention in cluster:
@@ -230,7 +162,6 @@ class InteractionDetection:
             cleaned_clusters[label] = cleaned_mentions
         return cleaned_clusters
 
-
     def save(self) -> None:
         """
         Save the (1) entire, (2) narrative units, (3) co-reference, (4) sentiment analysis, and (5) conversation
@@ -243,7 +174,7 @@ class InteractionDetection:
         with open(st_path.joinpath("narrative_units.json"), "w") as f:
             json.dump(self.narrative_units, f)
 
-    def get_sentiment(self, narrative_units) -> defaultdict[int: dict[str: dict[str: float]]]:
+    def get_sentiment_vader(self, narrative_units:narrative_units.NarrativeUnits) -> narrative_units.NarrativeUnits:
         """
         add sentiment polarity to each narrative unit
         :return:
@@ -251,11 +182,41 @@ class InteractionDetection:
         analyzer = SentimentIntensityAnalyzer()
         polarities = dict()
         for i in range(len(narrative_units)):
-            text = narrative_units[i]["text"]
+            text = narrative_units.get_text(i)
             polarity = analyzer.polarity_scores(text)
-            narrative_units[i]["polarity"] = polarity
+            narrative_units.add_property(i, "polarity", polarity)
+        return narrative_units
+    
+    def get_sentiment_hugface(self,
+                              narrative_units:narrative_units.NarrativeUnits,
+                              model_name: str="finiteautomata/bertweet-base-sentiment-analysis",
+                              max_length=1024
+                              ) -> narrative_units.NarrativeUnits:
+        """
+        add sentiment polarity to each narrative unit
+        :return:
+        """
+
+        self.sa_tokenizer = AutoTokenizer.from_pretrained(model_name, max_length=max_length)
+        self.sa_model = AutoModelForSequenceClassification.from_pretrained(model_name, max_length=max_length)
+        print(f"max pos embeds: {self.sa_model.config.max_position_embeddings}")
+        # self.sa_model.config.max_position_embeddings = max_length
+        self.sa_model.eval()
+        if torch.cuda.is_available():
+            self.sa_model.to("cuda")
+            print(f"Model is on GPU: {model_name}")
+
+
+        for i in range(len(narrative_units)):
+            text = narrative_units.get_text(i)
+            print(f"Unit {i}")
+            input_ids = self.sa_tokenizer(text, return_tensors="pt", truncation=True, max_length=max_length).input_ids
+            output = self.sa_model(input_ids)
+            polarity = output.logits
+            narrative_units.add_property(i, "polarity", polarity)
         return narrative_units
 
+    @PendingDeprecationWarning
     def get_conversations(self, nlp, doc):
         # detect conversations and its indexes
         tracker = self.find_conversations(nlp, doc)
@@ -267,8 +228,7 @@ class InteractionDetection:
             tracker[i]["speaker"] = speaker
             tracker[i]["addressee"] = addressee
 
-
-
+    @PendingDeprecationWarning
     def find_conversations(self,
                              nlp: spacy.language.Language,
                              doc: spacy.tokens.doc.Doc,
@@ -324,7 +284,8 @@ class InteractionDetection:
             if len(done) == len(tracker):
                 break
         return tracker
-
+    
+    @PendingDeprecationWarning
     def identify_sp_ad_sent(self, doc, tracker: dict[str]) -> dict[str: dict[str, int]]:
         """
         Identify the speaker and addressee of a conversation
@@ -333,18 +294,62 @@ class InteractionDetection:
         :return: dictionary of speaker and addressee as a spacy token object
         """
         # get the speaker and addressee
-        speaker = None
-        addressee = None
+        speaker = []
+        addressee = []
+        in_quote = False
         # get the speaker and addressee
         for token in doc[tracker["sent start"]:tracker["sent end"]]:
-            msg.info(f"{token.text} のdependencyは…  {token.dep_}だよ！")
-            if token.dep_ == "nsubj" and (token.i < tracker['quote start'] or tracker['quote end'] < token.i):
-                speaker = token
-            elif token.dep_ == "dobj" or token.dep_ == "pobj" and (
-                    token.i < tracker['quote start'] or tracker['quote end'] < token.i):
-                addressee = token
+            if token.is_quote:
+                in_quote = not in_quote
+            if token.dep_ == "nsubj" and in_quote is False:
+                speaker.append(token)
+            elif (token.dep_ == "dobj" or token.dep_ == "pobj") and in_quote is False:
+                addressee.append(token)
         return {"speaker": speaker, "addressee": addressee}
 
+    @PendingDeprecationWarning
     def identify_sp_ad_context(self, doc, tracker):
-        for quote in tracker.values():
-            pass
+        sent = doc[tracker["sent start"]:tracker["sent end"]]
+        para_id = sent[0]._.paragraph_id
+        para = doc._.paragraphs[para_id]
+
+        # identify addressee when it's missing
+        if tracker["addressee"] is None:
+            for token in para:
+                if token.dep_ == "nsubj" and token.head == tracker["speaker"]:
+                    tracker["addressee"].append(token)
+
+
+
+
+"""
+    def get_coref_stanfordCoreNLP(self):
+        # reference:
+        # https://stackoverflow.com/questions/62735456/understanding-and-using-coreference-resolution-stanford-nlp-tool-in-python-3-7
+        chain = self.ann.corefChain
+        print(type(chain))
+        print(dict(chain))
+        chain_dict = {}
+        for chain_idx, chain in enumerate(chain):
+            chain_dict[chain_idx] = {}
+            chain_dict[chain_idx]['chainID'] = chain.chainID
+            chain_dict[chain_idx]['mentions'] = [{'mentionID': mention.mentionID,
+                                                  'beginIndex': mention.beginIndex,
+                                                  'endIndex': mention.endIndex,
+                                                  'sentenceIndex': mention.sentenceIndex,
+                                                  'ref': '',
+                                                  } for mention in chain.mention]
+
+        for k, coreference in chain_dict.items():
+            ref_list = []
+            for i, mention in enumerate(coreference['mentions']):
+                ref = self.ann.sentence[mention['sentenceIndex']].token[mention['beginIndex']:mention['endIndex']]
+                ref = ' '.join(t.word for t in ref)
+                chain_dict[k]['mentions'][i]['ref'] = ref
+                ref_list.append({
+                    'beginIndex': mention['beginIndex'],
+                    'endIndex': mention['endIndex'],
+                })
+            chain_dict[k]['coreferences'] = ref_list
+        return chain_dict
+"""

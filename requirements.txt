@@ -1,0 +1,9 @@
+nameparser==1.0.5
+networkx==3.2.1
+pandas==2.0.3
+spacy==3.4.4
+stanza==1.7.0
+unionfind==0.2.0
+vaderSentiment==3.3.2
+vaderSentiment==3.3.2
+wasabi==0.10.1

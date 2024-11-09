@@ -23,7 +23,7 @@ def format_llm_ss(file:list="all") -> dict:
 
     # signs to remove and alternative string to be replaced to
     signs = {
-        "\n": " ",
+        # "\n": " ",
         "\t": "",
     }
 
@@ -69,7 +69,7 @@ def format_human_ss(file:list="all"):
 
     # signs to remove and alternative string to be replaced to
     signs = {
-        "\n": " ",
+        # "\n": " ",
         "\t": ""
     }
 
