@@ -1,5 +1,5 @@
 import networkx as nx
-from src.tools.character import Character
+from src.tools.character import Character, AllCharacters
 from src.tools.narrative_units import NarrativeUnits
 from typing import List, Tuple, Dict, Any
 
@@ -10,21 +10,25 @@ class CharNet(nx.Graph):
     def __init__(self,
                  title: str,
                  type: str,
-                 chars: list[str: Character],
-                 narrative_units: NarrativeUnits
+                 chars: AllCharacters,
+                 narrative_units: NarrativeUnits,
+                 id2label: Dict[int, str]=None,
                  ) -> None:
         """
-        :param chars: dictionary of character names and their corresponding Character objects
         :param occurrences: a list of different references to the same characters
         :param title: title of the story
         :param type: type of the character network: "co-occurrence" or "conversation"
+        :param chars: AllCharacters object that contains all the characters in the story
+        :param narrative_units: NarrativeUnits object that contains the story
+        :param id2label: dictionary that maps the label id to the label name
         """
         super().__init__(name=title, type=type)
         self.type = type
         self.meta_chars = chars
-        self.char_names = list(chars.keys())
-        self._charname_id = {char.id: char.name for char in chars}
+        self.char_names = chars.get_names()
+        self._charname_id = {char.id: char.name for char in chars.get_all_characters()}
         self.narrative_units = narrative_units
+        self.id2label = id2label
 
         self.update_nodes_from_metachars()
 
@@ -58,12 +62,13 @@ class CharNet(nx.Graph):
         if self.narrative_units.get_property(0, "polarity") is None:
             raise ValueError("The narrative units do not have a polarity property")
         
-        adj_matrix = np.zeros((len(self.char_names), len(self.char_names), self.narrative_units.get_property(0, "polarity").shape[0]))   # (num_chars, num_chars, polarity_vector_dimension)
+        char_num = len(self.char_names)
+        adj_matrix = np.zeros((char_num, char_num, self.narrative_units.get_property(0, "polarity").shape[0]))   # (num_chars, num_chars, polarity_vector_dimension)
         
         for i in range(len(self.narrative_units)):
-            polarity = np.array(self.narrative_units.get_property(i, "polarity"))
+            polarity = np.array(self.narrative_units.get_property(i, "polarity"))   # (polarity_vector_dimension,)
             # identify the characters in the narrative unit
-            characters = self.narrative_units.add_property(i, 'characters')
+            characters = self.narrative_units.get_property(i, 'characters')
             ids = list(set(char.id for char in characters if char.id))
             assert len(polarity) == adj_matrix.shape[2]
             adj_matrix[ids, ids] += polarity
@@ -71,11 +76,18 @@ class CharNet(nx.Graph):
         adj_matrix /= len(self.narrative_units)
         
         # add the most probable label to the graph
-        adj_matrix = np.argmax(adj_matrix, axis=2)  # (num_chars, num_chars)
+        adj_matrix = np.argmax(adj_matrix, axis=-1)  # (num_chars, num_chars)
         for i in range(len(self.char_names)):
             for j in range(len(self.char_names)):
                 if i != j:
-                    self.add_edge(i, j, polarity=adj_matrix[i, j])
+                    if self.id2label is None:
+                        self.add_edge(i, j, polarity=adj_matrix[i, j])
+                    else:
+                        self.add_edge(i, j, polarity=adj_matrix[i, j], label=self.id2label[adj_matrix[i, j]])
+
+        # label info
+        # if "finiteautomata/bertweet-base-sentiment-analysis", ["POSITIVE", "NEGATIVE", "NEUTRAL"]
+        # if "siebert/sentiment-roberta-large-english", ["POSITIVE", "NEGATIVE"]
 
 
 def merge(graph: CharNet, occurences: List[List[str]]) -> nx.Graph:

@@ -11,10 +11,12 @@ import re
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import torch.nn.functional as F
+from typing import List, Tuple, Dict, Any
 
 # import local files
 # from src.features.int_det import setup
-from src.tools import character, narrative_units
+from src.tools import narrative_units
+from src.tools.character import Character, AllCharacters
 from src.tools.path_tools import PathTools
 
 
@@ -26,7 +28,7 @@ class InteractionDetection:
                  title: str,
                  spacy_nlp: spacy.language.Language,
                  spacy_docs: dict[int: Doc],
-                 chars: dict[str: character.Character],
+                 chars: AllCharacters,
                  narrative_units: narrative_units.NarrativeUnits,
                  ) -> None:
         """
@@ -191,10 +193,10 @@ class InteractionDetection:
                               narrative_units:narrative_units.NarrativeUnits,
                               model_name: str="finiteautomata/bertweet-base-sentiment-analysis",
                               max_length=1024
-                              ) -> narrative_units.NarrativeUnits:
+                              ) -> Tuple[narrative_units.NarrativeUnits, Dict[int, str]]:
         """
         add sentiment polarity to each narrative unit
-        :return:
+        :return: narrative_units, id2label
         """
 
         self.sa_tokenizer = AutoTokenizer.from_pretrained(model_name, max_length=max_length)
@@ -214,7 +216,7 @@ class InteractionDetection:
             output = self.sa_model(input_ids)
             polarity = output.logits
             narrative_units.add_property(i, "polarity", polarity)
-        return narrative_units
+        return narrative_units, self.sa_model.config.id2label
 
     @PendingDeprecationWarning
     def get_conversations(self, nlp, doc):

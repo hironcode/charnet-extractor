@@ -110,5 +110,12 @@ class AllCharacters:
                 return char
         return None
     
+    def get_all_characters(self) -> list[Character]:
+        return list(self.chars.values())
+    
+    def get_gender(self, id:int) -> str:
+        return self.chars[id].gender
+
+
     
     

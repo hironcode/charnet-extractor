@@ -54,7 +54,7 @@ class CharacterIdentification:
         msg.good("Gender Annotation is done\n")
         msg.good("=" * 50)
 
-        self.occurrences = self.unify_occurrences(self.chars)
+        self.chars, self.occurrences = self.unify_occurrences(self.chars)
         msg.good("Occurrence Unification is done\n")
         msg.good("=" * 50)
 
@@ -101,7 +101,8 @@ class CharacterIdentification:
                     character = Character(name)
                     chars.add_character(name, character)
                     chars.assign_ids()
-                chars[name].append_occurences(ent.start)
+                id = chars.name_to_id(name)
+                chars.append_occurence(id, ent.start)
         return chars
 
     def annotate_gender(self, chars: AllCharacters) -> AllCharacters:
@@ -175,7 +176,7 @@ class CharacterIdentification:
         else:
             return True
 
-    def unify_occurrences(self, chars) -> list[list]:
+    def unify_occurrences(self, chars:AllCharacters) -> list[list]:
         """
         Rules (https://aclanthology.org/D15-1088/)\n
         Two vertices cannot be merged if\n
@@ -186,17 +187,17 @@ class CharacterIdentification:
         """
         if chars is None:
             raise ValueError(f"chars has not defined yet. Run detect_characters first.")
-        for char in chars.values():
+        for char in chars.get_all_characters():
             if char.gender == "GENDER UNDEFINED":
                 raise ValueError(f"annotate gender first by running annotate_gender method.")
 
-        ou = OccurrenceUnification(chars)
+        ou = OccurrenceUnification(chars.chars)
         referents = ou.unify_referents()
 
         # merge occurrences
         same_chars = {}
         # check through if each referent exists in the story (or self.chars)
-        chars_all = set(chars.keys())
+        chars_all = set(chars.get_names())
 
         """possible to make this part faster"""
         # for each character name
@@ -210,17 +211,19 @@ class CharacterIdentification:
         # filter referents that do not meet gender or title consistency
         to_remove = []
         for name, refs in same_chars.items():
-            gender1 = chars[name].gender
+            id = chars.name_to_id(name)
+            gender1 = chars.get_gender(id)
             for ref in refs:
                 # if the characters' genders do not match, they are different characters
                 # UNKNOWNは許容する
-                gender2 = chars[ref].gender
+                ref_id = chars.name_to_id(ref)
+                gender2 = chars.get_gender(ref_id)
                 if self._gender_unmatch(gender1, gender2):
                     to_remove.append((name, ref))
 
                 # if both have a title, but they do not match, they are two separate characters
-                title1: str = chars[name].name_parsed.title
-                title2: str = chars[ref].name_parsed.title
+                title1: str = chars.get_character_from_name(name).name_parsed.title
+                title2: str = chars.get_character_from_name(ref).name_parsed.title
                 if (title1 != '' and title2 != '') and (title1 != title2):
                     to_remove.append((name, ref))
                 # otherwise, they are the same character
@@ -258,7 +261,7 @@ class CharacterIdentification:
             max_occurrence = 0
             # fetch referring names of each referent and get the char name of the maximum occurrences
             for name in names:
-                occ = len(chars[name].occurences)
+                occ = len(chars.chars[name].occurences)
                 if occ > max_occurrence:
                     max_name = name
                     max_occurrence = occ
@@ -267,27 +270,27 @@ class CharacterIdentification:
         # merge each pair of names if they share the same gender or their titles are consistent
         # assign a name that potentially refers to different characters to the most frequent name too
         # Mr. Holmes -> Sherlock Holmes or Mycroft Holmes -> assign Sherlock as more frequent than Mycroft
-        charlist = list(chars.keys())
+        charlist = chars.get_names()
         correspondence = defaultdict(list)
 
         for i, char1 in enumerate(charlist[:-1]):
-            first1 = chars[char1].name_parsed.first
-            last1 = chars[char1].name_parsed.last
-            title1: str = chars[char1].name_parsed.title
+            first1 = chars.get_character_from_name(char1).name_parsed.first
+            last1 = chars.get_character_from_name(char1).name_parsed.last
+            title1: str = chars.get_character_from_name(char1).name_parsed.title
             l1 = [first1, last1, title1]
             if l1.count('') >= 2:
                 continue
 
             for char2 in charlist[i+1:]:
-                first2 = chars[char2].name_parsed.first
-                last2 = chars[char2].name_parsed.last
-                title2: str = chars[char2].name_parsed.title
+                first2 = chars.get_character_from_name(char2).name_parsed.first
+                last2 = chars.get_character_from_name(char2).name_parsed.first
+                title2: str = chars.get_character_from_name(char2).name_parsed.first
                 l2 = [first2, last2, title2]
                 if l2.count('') >= 2:
                     continue
 
                 # if the characters' genders do not match, they are different characters
-                if chars[char1].gender != chars[char2].gender:
+                if chars.get_gender(char1) != chars.get_gender(char2):
                     continue
                 # if both have a title, but they do not match, they are two separate characters
                 if (title1 != '' and title2 != '') and (title1 != title2):
@@ -305,9 +308,15 @@ class CharacterIdentification:
             max_occurrence = 0
             # fetch refering names of each referent and get the char name of the maximum occurences
             for name in char2s:
-                occ = len(chars[name].occurences)
+                occ = len(chars.get_character_from_name(name).occurences)
                 if occ > max_occurrence:
                     max_name = name
                     max_occurrence = occ
             char_groups.unite(char1, max_name)
-        return char_groups.groups()
+
+        # update the occurence matrix in ALl Characters
+        for group in char_groups.groups():
+            ids = [chars.name_to_id(name) for name in group]
+            chars.update_occurences_from_list(ids)
+
+        return self.chars, char_groups.groups()

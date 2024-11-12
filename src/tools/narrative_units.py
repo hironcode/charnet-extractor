@@ -1,6 +1,6 @@
 from collections import defaultdict
 from spacy.tokens import Doc
-from src.tools.character import Character
+from src.tools.character import Character, AllCharacters
 import math
 from typing import Any, Dict
 
@@ -9,7 +9,7 @@ class NarrativeUnits:
             self,
             title:str,
             docs:dict[int: Doc],
-            chars: dict[str: Character],
+            chars: AllCharacters,
             unit_percentile:float=0.025,
             ) -> None:
         """
@@ -29,7 +29,7 @@ class NarrativeUnits:
 
 
         # Push chars in ascending order based on their token index
-        idxs = [(idx, char) for char in chars for idx in char.occurences]
+        idxs = [(idx, char) for char in chars.get_all_characters() for idx in char.occurences]
         idxs = sorted(idxs, key=lambda x: x[0], reverse=False)
 
 
@@ -49,6 +49,7 @@ class NarrativeUnits:
         token_idx = 0
         # string object that stores the actual text of each narrative unit
         narrative = ''
+        pointer = 0
 
         characters = []
         for doc in docs.values():
@@ -67,7 +68,6 @@ class NarrativeUnits:
 
                     # check what characters are in the unit
                     done = False
-                    pointer = 0
                     while not done:
                         idx, char = idxs[pointer]
                         if idx <= token_idx:
