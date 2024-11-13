@@ -206,7 +206,6 @@ class InteractionDetection:
         self.sa_model.eval()
         if torch.cuda.is_available():
             self.sa_model.to("cuda")
-            self.sa_tokenizer.to("cuda")
             print(f"Model is on GPU: {model_name}")
 
 
@@ -214,8 +213,11 @@ class InteractionDetection:
             text = narrative_units.get_text(i)
             print(f"Unit {i}")
             input_ids = self.sa_tokenizer(text, return_tensors="pt", truncation=True, max_length=max_length).input_ids
+            input_ids = input_ids.to("cuda") if torch.cuda.is_available() else input_ids
             output = self.sa_model(input_ids)
-            polarity = output.logits
+            # delete gradient and move to cpu
+            # also turn it into numpy array
+            polarity = output.logits.cpu().detach().numpy()
             narrative_units.add_property(i, "polarity", polarity)
         return narrative_units, self.sa_model.config.id2label
 
