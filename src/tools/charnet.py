@@ -52,7 +52,7 @@ class CharNet(nx.Graph):
         Update the graph from the metachars dictionary already registered in this instance
         """
         self.clear()
-        for char in self.meta_chars.values():
+        for char in self.meta_chars.get_all_characters():
             self.add_node(char.id)
 
     def update_edges_from_polarity(self) -> None:
@@ -88,7 +88,7 @@ class CharNet(nx.Graph):
         # label info
         # if "finiteautomata/bertweet-base-sentiment-analysis", ["POSITIVE", "NEGATIVE", "NEUTRAL"]
         # if "siebert/sentiment-roberta-large-english", ["POSITIVE", "NEGATIVE"]
-
+        
 
 def merge(graph: CharNet, occurences: List[List[str]]) -> nx.Graph:
     """
