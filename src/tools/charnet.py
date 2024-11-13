@@ -90,27 +90,26 @@ class CharNet(nx.Graph):
         # if "siebert/sentiment-roberta-large-english", ["POSITIVE", "NEGATIVE"]
         
 
-def merge(graph: CharNet, occurences: List[List[str]]) -> nx.Graph:
+def merge_charnet_occurences(graph: CharNet) -> nx.Graph:
     """
     Merge all occurrences of the same character into one node
     :return: merged graph
     """
-    
-
-    """
-    for names in occurences:
+    occurences: np.ndarray = graph.meta_chars.occurences
+    same_idxs = np.where(occurences == 1)
+    idxs = [list(map(int, mulidx)) for mulidx in zip(*same_idxs)]
+    for same_char_ids in idxs:
         # get the most used reference in the story as a representative of the character
         max_occ = 0
-        max_name = names[0]
-        for name in names:
-            char = graph.chars[name]
+        max_id = same_char_ids[0]
+        for id in same_char_ids:
+            char:Character = graph.meta_chars.id_chars[id]
             if len(char.occurences) > max_occ:
                 max_occ = len(char.occurences)
-                max_name = char.name
+                max_id = char.id
         # merge nodes
-        for name in names:
-            char = graph.chars[name]
-            if char.name != max_name:
-                graph = nx.contracted_nodes(graph, max_name, char.name)
+        for id in same_char_ids:
+            char:Character = graph.meta_chars.id_chars[id]
+            if char.id != max_id:
+                graph = nx.contracted_nodes(graph, max_id, char.id, self_loops=False)
     return graph
-"""
