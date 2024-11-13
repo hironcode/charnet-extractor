@@ -200,20 +200,22 @@ class InteractionDetection:
         """
 
         self.sa_tokenizer = AutoTokenizer.from_pretrained(model_name, max_length=max_length)
-        self.sa_model = AutoModelForSequenceClassification.from_pretrained(model_name, max_length=max_length)
+        self.sa_model = AutoModelForSequenceClassification.from_pretrained(model_name, max_length=max_length)        
         print(f"max pos embeds: {self.sa_model.config.max_position_embeddings}")
         # self.sa_model.config.max_position_embeddings = max_length
         self.sa_model.eval()
+        device = "cpu"
         if torch.cuda.is_available():
-            self.sa_model.to("cuda")
-            print(f"Model is on GPU: {model_name}")
+            device="cuda"
+            self.sa_model.to(device)
 
-
+        print(f"Is model on GPU?: {next(self.sa_model.parameters()).is_cuda}")
         for i in range(len(narrative_units)):
             text = narrative_units.get_text(i)
             print(f"Unit {i}")
             input_ids = self.sa_tokenizer(text, return_tensors="pt", truncation=True, max_length=max_length).input_ids
-            input_ids = input_ids.to("cuda") if torch.cuda.is_available() else input_ids
+            input_ids = input_ids.to(device)
+            print(f"Is input_ids on GPU?: {input_ids.is_cuda}")
             output = self.sa_model(input_ids)
             # delete gradient and move to cpu
             # also turn it into numpy array
