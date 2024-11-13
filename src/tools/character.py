@@ -94,7 +94,8 @@ class AllCharacters:
 
         :param same_chars: list of IDs of the same characters
         """
-        self.occurences[same_chars, same_chars] = 1
+        grid = np.ix_(same_chars, same_chars)
+        self.occurences[grid] = 1
 
     def get_occurences(self) -> int:
         """

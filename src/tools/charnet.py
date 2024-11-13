@@ -5,6 +5,8 @@ from typing import List, Tuple, Dict, Any
 
 import spacy
 import numpy as np
+import torch
+import torch.nn.functional as F
 
 class CharNet(nx.Graph):
     def __init__(self,
@@ -64,22 +66,35 @@ class CharNet(nx.Graph):
         
         char_num = len(self.char_names)
         adj_matrix = np.zeros((char_num, char_num, self.narrative_units.get_property(0, "polarity").shape[0]))   # (num_chars, num_chars, polarity_vector_dimension)
-        
+
+        # to mask the pairs of characters whose polarity has not been updated
+        not_updated = np.full(adj_matrix.shape[:2], True, dtype=bool)   # (num_chars, num_chars)
+
         for i in range(len(self.narrative_units)):
             polarity = np.array(self.narrative_units.get_property(i, "polarity"))   # (polarity_vector_dimension,)
             # identify the characters in the narrative unit
             characters = self.narrative_units.get_property(i, 'characters')
             ids = list(set(char.id for char in characters if char.id))
             assert len(polarity) == adj_matrix.shape[2]
-            adj_matrix[ids, ids] += polarity
+            # Create indeces such that all the interactions among characters given with the ids
+            # will be updated with the polarity
+            grid = np.ix_(ids, ids)
+            adj_matrix[grid] += polarity
+            not_updated[grid] = False
+
         # after adding all the polarities, get average
         adj_matrix /= len(self.narrative_units)
-        
-        # add the most probable label to the graph
-        adj_matrix = np.argmax(adj_matrix, axis=-1)  # (num_chars, num_chars)
-        for i in range(len(self.char_names)):
-            for j in range(len(self.char_names)):
-                if i != j:
+
+        # select the most probable labels with softmax
+        adj_matrix = F.softmax(torch.Tensor(adj_matrix)).argmax(dim=-1) # (num_chars, num_chars)
+
+        # mask non-updated pairs
+        adj_matrix[not_updated] = -100
+
+        for i in range(char_num):
+            for j in range(char_num):
+                # rule out the self-loops and the non-updated pairs
+                if i != j and adj_matrix[i, j] != -100:
                     if self.id2label is None:
                         self.add_edge(i, j, polarity=adj_matrix[i, j])
                     else:
