@@ -31,6 +31,7 @@ class CharNet(nx.Graph):
         self._charname_id = {char.id: char.name for char in chars.get_all_characters()}
         self.narrative_units = narrative_units
         self.id2label = id2label
+        self.collapsed = {}
 
         self.update_nodes_from_metachars()
 
@@ -45,6 +46,8 @@ class CharNet(nx.Graph):
         self._charname_id = {char.id: name for name, char in meta_chars.items()}
         if update_graph:
             self.update_nodes_from_metachars()
+            if self.collapsed:
+                self.collapse_nodes(self.collapsed)
 
     def update_metachars_each(self, name:str, character: Character) -> None:
         self.meta_chars[name] = character
@@ -56,6 +59,8 @@ class CharNet(nx.Graph):
         self.clear()
         for char in self.meta_chars.get_all_characters():
             self.add_node(char.id)
+            if self.collapsed:
+                self.collapse_nodes(self.collapsed)
 
     def update_edges_from_polarity(self) -> None:
         """
@@ -64,6 +69,8 @@ class CharNet(nx.Graph):
         if self.narrative_units.get_property(0, "polarity") is None:
             raise ValueError("The narrative units do not have a polarity property")
         
+        self.clear_edges()
+
         char_num = len(self.char_names)
         adj_matrix = np.zeros((char_num, char_num, self.narrative_units.get_property(0, "polarity").shape[0]))   # (num_chars, num_chars, polarity_vector_dimension)
 
@@ -104,6 +111,30 @@ class CharNet(nx.Graph):
         # label info
         # if "finiteautomata/bertweet-base-sentiment-analysis", ["POSITIVE", "NEGATIVE", "NEUTRAL"]
         # if "siebert/sentiment-roberta-large-english", ["POSITIVE", "NEGATIVE"]
+
+    def collapse_nodes(self, nodes_to_collapse:Dict[int, List[int]]) -> None:
+        """
+        Reference: https://stackoverflow.com/questions/74836446/networkx-merge-list-of-nodes-into-a-new-one-conserving-edges
+        
+
+        """
+        edges = list(self.edges)
+        new_edges = []
+        for k,v in nodes_to_collapse.items():
+            for n1, n2 in edges:
+                if n1 in v:
+                    n1 = k
+                if n2 in v:
+                    n2 = k
+                if n1 == n2:
+                    continue
+                new_edges.append((n1,n2))
+            # save information of the collapsed nodes
+            prior_v = self.collapsed.get(k, [])
+            self.collapsed[k] = list(set(prior_v + v))
+
+        self.clear()
+        self.add_edges_from(new_edges)
         
 
 def merge_charnet_occurences(graph: CharNet) -> nx.Graph:
@@ -124,8 +155,11 @@ def merge_charnet_occurences(graph: CharNet) -> nx.Graph:
                 max_occ = len(char.occurences)
                 max_id = char.id
         # merge nodes
-        for id in same_char_ids:
-            char:Character = graph.meta_chars.id_chars[id]
-            if char.id != max_id:
-                graph = nx.contracted_nodes(graph, max_id, char.id, self_loops=False)
+        collapse = {max_id: same_char_ids}
+        graph.collapse_nodes(collapse)
+
+        # for id in same_char_ids:
+        #     char:Character = graph.meta_chars.id_chars[id]
+        #     if char.id != max_id:
+        #         graph = nx.contracted_nodes(graph, max_id, char.id, self_loops=False)
     return graph
