@@ -247,7 +247,7 @@ class CharacterIdentification:
             repeated_referents.pop(ref)
 
         # use union-find algorithm to cluster separate names to each group
-        char_groups = CharacterGrouping(list(chars.keys()))
+        char_groups = CharacterGrouping(chars.get_names())
         for name, refs in same_chars.items():
             for ref in refs:
                 # if a referent is repeated, skip it
@@ -288,9 +288,10 @@ class CharacterIdentification:
                 l2 = [first2, last2, title2]
                 if l2.count('') >= 2:
                     continue
-
+                
+                
                 # if the characters' genders do not match, they are different characters
-                if chars.get_gender(char1) != chars.get_gender(char2):
+                if chars.get_gender(chars.name_to_id(char1)) != chars.get_gender(chars.name_to_id(char2)):
                     continue
                 # if both have a title, but they do not match, they are two separate characters
                 if (title1 != '' and title2 != '') and (title1 != title2):
@@ -314,6 +315,8 @@ class CharacterIdentification:
                     max_occurrence = occ
             char_groups.unite(char1, max_name)
 
+        # reset the occurrence matrix as new characters were added to this AllCharacter instance
+        chars.reset_occurences()
         # update the occurence matrix in ALl Characters
         for group in char_groups.groups():
             ids = [chars.name_to_id(name) for name in group]

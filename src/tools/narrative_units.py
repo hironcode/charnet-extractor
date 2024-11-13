@@ -51,6 +51,8 @@ class NarrativeUnits:
         narrative = ''
         pointer = 0
 
+        print(f"len(idxs): {len(idxs)}")
+
         characters = []
         for doc in docs.values():
             doc: Doc
@@ -62,21 +64,26 @@ class NarrativeUnits:
                 if sent_idx == each_unit_sent_num:
                     # add the narrative-unit text to the dictionary
                     self.update_text(unit_idx, narrative)
-                    narrative = ""
-                    unit_idx += 1
-                    sent_idx = 0
 
                     # check what characters are in the unit
                     done = False
                     while not done:
                         idx, char = idxs[pointer]
-                        if idx <= token_idx:
+                        print(f"idx: {idx}, token_idx: {token_idx}")
+                        print(f"char: {char.name}")
+                        
+                        if pointer == len(idxs) - 1:    # otherwise, pointer will be out of range
+                            done = True
+                        elif idx <= token_idx:
                             characters.append(char)
                             pointer += 1
                         elif idx > token_idx:
                             done = True
                     self.add_property(unit_idx, "characters", characters)
                     characters = []
+                    narrative = ""
+                    unit_idx += 1
+                    sent_idx = 0
         # add the last remaining sentences to the dictionary
         self.update_text(unit_idx, narrative)
         characters = [char for idx, char in idxs[pointer:]]
@@ -119,7 +126,7 @@ class NarrativeUnits:
         :param key: key of the property
         :return: value of the property
         """
-        return self.units[unit_idx][key] if key in self.units[unit_idx] else None
+        return self.units[unit_idx][key]
     
     def info(self):
         """
@@ -145,3 +152,14 @@ class NarrativeUnits:
     
     def __getitem__(self, unit_idx:int) -> Dict[str, Any]:
         return self.units[unit_idx]
+    
+    def keys(self):
+        return self.units.keys()
+    
+    def values(self):
+        return self.units.values()
+    
+    def items(self):
+        return self.units.items()
+    
+    

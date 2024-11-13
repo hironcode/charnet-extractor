@@ -191,7 +191,7 @@ class InteractionDetection:
     
     def get_sentiment_hugface(self,
                               narrative_units:narrative_units.NarrativeUnits,
-                              model_name: str="finiteautomata/bertweet-base-sentiment-analysis",
+                              model_name: str="siebert/sentiment-roberta-large-english",
                               max_length=1024
                               ) -> Tuple[narrative_units.NarrativeUnits, Dict[int, str]]:
         """

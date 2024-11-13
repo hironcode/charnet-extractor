@@ -1,6 +1,7 @@
 from nameparser import HumanName
 from src.tools.data_based_name_parser import NameParserChecker
 import numpy as np
+from typing import Dict, Any, Tuple, List
 
 class Character:
     def __init__(self, name:str):
@@ -49,6 +50,13 @@ class AllCharacters:
         Get the names of all characters in string format
         """
         return list(self.chars.keys())
+    
+    def update_id_chars(self) -> None:
+        """
+        Update the internal id_chars dictionary
+        """
+        self.id_chars = {char.id: char for char in self.chars.values()}
+        
 
     def assign_ids(self) -> None:
         """
@@ -56,8 +64,11 @@ class AllCharacters:
         """
 
         # apply sorting to save a consistent order
-        for i in sorted(range(len(self.chars)), key=lambda x: self.chars[x].name):
-            self.chars[i].id = i
+        id = 0
+        for name in sorted(list(self.chars.keys())):
+            self.chars[name].id = id
+            id += 1
+        self.update_id_chars()
     
     def id_to_name(self, id:int) -> str:
         return self.id_chars[id].name
@@ -69,11 +80,13 @@ class AllCharacters:
         self.chars[name] = character
     
     def append_occurence(self, id:int, start_idx:int) -> None:
-        self.chars[id].append_occurences(start_idx)
+        name = self.id_to_name(id)
+        self.chars[name].append_occurences(start_idx)
 
     def update_gender(self, id:int, gender:str) -> None:
         assert gender in ["MALE", "FEMALE", "UNKNOWN"], gender
-        self.chars[id].update_gender(gender)
+        name = self.id_to_name(id)
+        self.chars[name].update_gender(gender)
 
     def update_occurences_from_list(self, same_chars:list[int]) -> None:
         """
@@ -105,16 +118,20 @@ class AllCharacters:
         return self.chars[name]
     
     def get_character_from_id(self, id:int) -> Character:
-        for char in self.chars.values():
-            if char.id == id:
-                return char
-        return None
+        name = self.id_to_name(id)
+        try:
+            return self.chars[name]
+        except KeyError:
+            return None
     
     def get_all_characters(self) -> list[Character]:
         return list(self.chars.values())
     
     def get_gender(self, id:int) -> str:
-        return self.chars[id].gender
+        if type(id) != int:
+            raise ValueError(f"ID must be an integer, not {type(id)}")
+        name = self.id_to_name(id)
+        return self.chars[name].gender
 
 
     
