@@ -50,9 +50,7 @@ class NarrativeUnits:
         # string object that stores the actual text of each narrative unit
         narrative = ''
         pointer = 0
-
-        print(f"len(idxs): {len(idxs)}")
-
+        
         characters = []
         for doc in docs.values():
             doc: Doc
@@ -69,8 +67,6 @@ class NarrativeUnits:
                     done = False
                     while not done:
                         idx, char = idxs[pointer]
-                        print(f"idx: {idx}, token_idx: {token_idx}")
-                        print(f"char: {char.name}")
                         
                         if pointer == len(idxs) - 1:    # otherwise, pointer will be out of range
                             done = True
@@ -161,5 +157,4 @@ class NarrativeUnits:
     
     def items(self):
         return self.units.items()
-    
     

@@ -206,6 +206,7 @@ class InteractionDetection:
         self.sa_model.eval()
         if torch.cuda.is_available():
             self.sa_model.to("cuda")
+            self.sa_tokenizer.to("cuda")
             print(f"Model is on GPU: {model_name}")
 
 
