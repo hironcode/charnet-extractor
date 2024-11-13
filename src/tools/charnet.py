@@ -86,7 +86,7 @@ class CharNet(nx.Graph):
         adj_matrix /= len(self.narrative_units)
 
         # select the most probable labels with softmax
-        adj_matrix = F.softmax(torch.Tensor(adj_matrix)).argmax(dim=-1) # (num_chars, num_chars)
+        adj_matrix = F.softmax(torch.Tensor(adj_matrix)).argmax(dim=-1).numpy() # (num_chars, num_chars)
 
         # mask non-updated pairs
         adj_matrix[not_updated] = -100
@@ -95,10 +95,11 @@ class CharNet(nx.Graph):
             for j in range(char_num):
                 # rule out the self-loops and the non-updated pairs
                 if i != j and adj_matrix[i, j] != -100:
+                    value = adj_matrix[i, j]
                     if self.id2label is None:
-                        self.add_edge(i, j, polarity=adj_matrix[i, j])
+                        self.add_edge(i, j, polarity=value)
                     else:
-                        self.add_edge(i, j, polarity=adj_matrix[i, j], label=self.id2label[adj_matrix[i, j]])
+                        self.add_edge(i, j, polarity=value, label=self.id2label[value])
 
         # label info
         # if "finiteautomata/bertweet-base-sentiment-analysis", ["POSITIVE", "NEGATIVE", "NEUTRAL"]
