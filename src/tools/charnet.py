@@ -169,6 +169,6 @@ def merge_charnet_occurences(graph: CharNet) -> nx.Graph:
 
         for id in same_char_ids:
             char:Character = graph.meta_chars.id_chars[id]
-            if char.id != max_id:
+            if char.id != max_id and char.id in graph.nodes:
                 graph = nx.contracted_nodes(graph, max_id, char.id, self_loops=False, copy=False)
     return graph
