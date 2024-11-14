@@ -112,29 +112,38 @@ class CharNet(nx.Graph):
         # if "finiteautomata/bertweet-base-sentiment-analysis", ["POSITIVE", "NEGATIVE", "NEUTRAL"]
         # if "siebert/sentiment-roberta-large-english", ["POSITIVE", "NEGATIVE"]
 
-    def collapse_nodes(self, nodes_to_collapse:Dict[int, List[int]]) -> None:
+    def collapse_nodes(self, nodes_to_collapse:Dict[int, List[int]], self_loops:bool=False) -> None:
         """
         Reference: https://stackoverflow.com/questions/74836446/networkx-merge-list-of-nodes-into-a-new-one-conserving-edges
         
 
         """
-        edges = list(self.edges)
-        new_edges = []
+        edges = list(self.edges.data())
+        to_delte = []
         for k,v in nodes_to_collapse.items():
-            for n1, n2 in edges:
+            for i in range(len(edges)):
+                n1, n2, data = edges[i]
+                print('=====')
+                print(f"data before: {n1} {n2} {data}")
+                
                 if n1 in v:
                     n1 = k
                 if n2 in v:
                     n2 = k
-                if n1 == n2:
-                    continue
-                new_edges.append((n1,n2))
+                if n1 == n2 and self_loops is False:
+                    to_delte.append(i)
+                else:
+                    edges[i] = (n1, n2, data)
+                print(f"data after: {n1} {n2} {data}")
             # save information of the collapsed nodes
             prior_v = self.collapsed.get(k, [])
             self.collapsed[k] = list(set(prior_v + v))
 
+        for i in to_delte:
+            edges.pop(i)
+            
         self.clear()
-        self.add_edges_from(new_edges)
+        self.add_edges_from(edges)
         
 
 def merge_charnet_occurences(graph: CharNet) -> nx.Graph:
@@ -154,12 +163,12 @@ def merge_charnet_occurences(graph: CharNet) -> nx.Graph:
             if len(char.occurences) > max_occ:
                 max_occ = len(char.occurences)
                 max_id = char.id
-        # merge nodes
-        collapse = {max_id: same_char_ids}
-        graph.collapse_nodes(collapse)
+        # # merge nodes
+        # collapse = {max_id: same_char_ids}
+        # graph.collapse_nodes(collapse)
 
-        # for id in same_char_ids:
-        #     char:Character = graph.meta_chars.id_chars[id]
-        #     if char.id != max_id:
-        #         graph = nx.contracted_nodes(graph, max_id, char.id, self_loops=False)
+        for id in same_char_ids:
+            char:Character = graph.meta_chars.id_chars[id]
+            if char.id != max_id:
+                graph = nx.contracted_nodes(graph, max_id, char.id, self_loops=False, copy=False)
     return graph
