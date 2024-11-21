@@ -10,7 +10,7 @@ class NarrativeUnits:
             title:str,
             docs:dict[int: Doc],
             chars: AllCharacters,
-            unit_percentile:float=0.025,
+            unit_percentile:float=0.02,
             ) -> None:
         """
         Creates a dictionary-based class for narrative units
