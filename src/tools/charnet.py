@@ -164,11 +164,12 @@ def merge_charnet_occurences(graph: CharNet) -> nx.Graph:
                 max_occ = len(char.occurences)
                 max_id = char.id
         # # merge nodes
-        # collapse = {max_id: same_char_ids}
-        # graph.collapse_nodes(collapse)
-
         for id in same_char_ids:
             char:Character = graph.meta_chars.id_chars[id]
             if char.id != max_id and char.id in graph.nodes:
                 graph = nx.contracted_nodes(graph, max_id, char.id, self_loops=False, copy=False)
+
+        collapse = {max_id: same_char_ids}
+        graph.collapsed.update(collapse)
+
     return graph
