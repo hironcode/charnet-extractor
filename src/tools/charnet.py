@@ -152,8 +152,13 @@ def merge_charnet_occurences(graph: CharNet) -> nx.Graph:
     :return: merged graph
     """
     occurences: np.ndarray = graph.meta_chars.occurences
-    same_idxs = np.where(occurences == 1)
-    idxs = [list(map(int, mulidx)) for mulidx in zip(*same_idxs)]
+    idxs = np.where(occurences == 1)
+    idxs = list()
+    for i in range(occurences.shape[0]):
+        idx = sorted(list(np.where(occurences[i]==1)[0]))
+        print(idx)
+        idxs.append(idx) if idx not in idxs else None
+    # idxs = [list(map(int, mulidx)) for mulidx in zip(*idxs)]
     for same_char_ids in idxs:
         # get the most used reference in the story as a representative of the character
         max_occ = 0
@@ -169,7 +174,6 @@ def merge_charnet_occurences(graph: CharNet) -> nx.Graph:
             if char.id != max_id and char.id in graph.nodes:
                 graph = nx.contracted_nodes(graph, max_id, char.id, self_loops=False, copy=False)
 
-        collapse = {max_id: same_char_ids}
-        graph.collapsed.update(collapse)
+        graph.collapsed.update({max_id: same_char_ids})
 
     return graph
