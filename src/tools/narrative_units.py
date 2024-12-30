@@ -50,6 +50,10 @@ class NarrativeUnits:
         # string object that stores the actual text of each narrative unit
         narrative = ''
         pointer = 0
+
+        # start and end index of each narrative unit
+        start = 0
+        end = 0
         
         characters = []
         for doc in docs.values():
@@ -60,30 +64,42 @@ class NarrativeUnits:
                 narrative += sent.text + " "
 
                 if sent_idx == each_unit_sent_num:
+                    end = token_idx
                     # add the narrative-unit text to the dictionary
                     self.update_text(unit_idx, narrative)
 
-                    # check what characters are in the unit
+                    # check which characters are in the unit
                     done = False
                     while not done:
-                        idx, char = idxs[pointer]
+                        # idx, char = idxs[pointer]
                         
-                        if pointer == len(idxs) - 1:    # otherwise, pointer will be out of range
+                        if pointer == len(idxs):    # otherwise, pointer will be out of range
                             done = True
-                        elif idx <= token_idx:
+                            continue
+                        idx, char = idxs[pointer]
+                        # if token idx of the character is less than the current token idx
+                        if idx <= token_idx:
                             characters.append(char)
                             pointer += 1
                         elif idx > token_idx:
                             done = True
                     self.add_property(unit_idx, "characters", characters)
+                    self.add_property(unit_idx, "start", start)
+                    self.add_property(unit_idx, "end", end)
+
                     characters = []
                     narrative = ""
                     unit_idx += 1
                     sent_idx = 0
+                    start = token_idx 
         # add the last remaining sentences to the dictionary
         self.update_text(unit_idx, narrative)
         characters = [char for idx, char in idxs[pointer:]]
+        end = token_idx
+
         self.add_property(unit_idx, "characters", characters)
+        self.add_property(unit_idx, "start", start)
+        self.add_property(unit_idx, "end", end)
 
 
     def get_text(self, unit_idx:int) -> str:

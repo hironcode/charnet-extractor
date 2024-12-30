@@ -1,5 +1,13 @@
-from src.data import make_dataset
+try:
+    from src.data import make_dataset
+except:
+    import sys
+    from path_tools import PathTools
+    pt = PathTools()
+    sys.path.append(str(pt.get_root_dir()))
+    from src.data import make_dataset
 from nameparser import HumanName as _HumanName
+
 
 
 class NameParserChecker:
@@ -151,3 +159,10 @@ if __name__ == '__main__':
     print(f"{name4}\n")
     print(char4_parsed.as_dict())
     print(char4_checked.as_dict())
+
+    name5 = "Father Gabriel"
+    char5_parsed = _HumanName(name5)
+    char5_checked = NameParserChecker(name5)
+    print(f"{name5}\n")
+    print(char5_parsed.as_dict())
+    print(char5_checked.as_dict())

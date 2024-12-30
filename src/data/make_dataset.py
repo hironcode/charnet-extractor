@@ -114,7 +114,7 @@ def get_namelists():
     return female_names, male_names
 
 
-def get_titles() -> tuple[set, set]:
+def get_titles() -> tuple[set, set, set]:
     """
     :return: set of female titles and set of male titles. The elements in the sets does not contain a period, capitalized.
     """
@@ -128,10 +128,11 @@ def get_titles() -> tuple[set, set]:
     female_lines = list(map(lambda x: x.replace(".", ""), female_lines))
     # female_lines = list(map(lambda x: x.lower(), female_lines))
     # put the list in a set to do hash search in the future
+    female_lines = [e for e in female_lines if e != ""]
     female_titles = set(female_lines)
 
     # male_path = "../data/interim/unique_titles/male_honorofic_titles.txt"
-    male_path = _pt.get_target_dir("data/interim/unique_titles/male_honorofic_titles.txt")
+    male_path = _pt.get_target_dir("data/interim/unique_titles/male_honorific_titles.txt")
     with open(male_path, 'r') as f:
         male_lines = f.readlines()
     # list of names begins in the line 8 in both the text files
@@ -140,9 +141,24 @@ def get_titles() -> tuple[set, set]:
     male_lines = list(map(lambda x: x.replace(".", ""), male_lines))
     # male_lines = list(map(lambda x: x.lower(), male_lines))
     # put the list in a set to do hash search in the future
+    male_lines = [e for e in male_lines if e != ""]
     male_titles = set(male_lines)
 
-    return female_titles, male_titles
+    # common_path = "../data/interim/unique_titles/common_honorific_titles.txt"
+    common_path = _pt.get_target_dir("data/interim/unique_titles/common_honorific_titles.txt")
+    with open(common_path, 'r') as f:
+        common_lines = f.readlines()
+    # list of names begins in the line 8 in both the text files
+    common_lines = list(map(lambda x: x.replace("\n", ""), common_lines))
+    # remove periods after each title and make them lowercase
+    common_lines = list(map(lambda x: x.replace(".", ""), common_lines))
+    # common_lines = list(map(lambda x: x.lower(), common_lines))
+    # put the list in a set to do hash search in the future
+    common_lines = [e for e in common_lines if e != ""]
+
+    common_titles = set(common_lines)
+
+    return female_titles, male_titles, common_titles
 
 
 def get_hypocorisms(nicknames_for_names:bool=True):

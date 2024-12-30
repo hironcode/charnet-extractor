@@ -18,7 +18,7 @@ class GenderAnnotation:
         self.chars = chars
 
     def annotate_gender_by_titles_simple(self):
-        female_titles, male_titles = make_dataset.get_titles()
+        female_titles, male_titles, _ = make_dataset.get_titles()
         name_genders = {
             name: "UNKNOWN" for name in list(self.chars.keys())
         }
@@ -39,13 +39,14 @@ class GenderAnnotation:
                     name_genders[name] = "UNKNOWN"
         return name_genders
 
-    def annotate_gender_by_titiles(self):
+    @DeprecationWarning
+    def annotate_gender_by_titles(self):
         """
         This method is deprecated if character names are extracted with titles
         :return:
         """
         # identification by titles
-        female_titles, male_titles = make_dataset.get_titles()
+        female_titles, male_titles, _ = make_dataset.get_titles()
 
         name_genders = {}
         for name in list(self.chars.keys()):
@@ -203,7 +204,7 @@ class GenderAnnotation:
             pronouns.append(sent[match[1]:match[2]])
         return pronouns
 
-    def _assign_gender_by_pronouns(self, pronouns):
+    def _assign_gender_by_pronouns(self, pronouns, threshold = 0.8):
         """
         This method takes a list of pronouns and determines the gender based on the most appearing gender categories
         :param pronouns: list
@@ -220,7 +221,6 @@ class GenderAnnotation:
                 female += 1
 
         gender = 'UNKNOWN'
-        threshold = 0.7
         if male > female:
             # if the male pronouns are more than the percentile of the threshold of the whole list
             if male/size >= threshold:

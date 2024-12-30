@@ -49,8 +49,6 @@ class InteractionDetection:
         self.conv_tracker = {}
 
         self.sentiment_analysis_ml_init = False
-        self.sa_model = None
-        self.sa_tokenizer = None
     
 
     def run(self, sentiment_analysis: str="ml", hf_model="finiteautomata/bertweet-base-sentiment-analysis") -> None:
@@ -200,9 +198,8 @@ class InteractionDetection:
         add sentiment polarity to each narrative unit
         :return: narrative_units, id2label
         """
-        if self.sa_model is None:
-            self.sa_tokenizer = AutoTokenizer.from_pretrained(model_name, max_length=max_length)
-            self.sa_model = AutoModelForSequenceClassification.from_pretrained(model_name, max_length=max_length)        
+        self.sa_tokenizer = AutoTokenizer.from_pretrained(model_name, max_length=max_length)
+        self.sa_model = AutoModelForSequenceClassification.from_pretrained(model_name, max_length=max_length)        
         print(f"max pos embeds: {self.sa_model.config.max_position_embeddings}")
         # self.sa_model.config.max_position_embeddings = max_length
         self.sa_model.eval()
