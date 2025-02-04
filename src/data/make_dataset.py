@@ -6,17 +6,14 @@ from src.tools.path_tools import PathTools
 _pt = PathTools()
 import re
 
-def format_llm_ss(file:list="all") -> dict:
+def format_llm_ss(file:list="all", ai="Gemini 2.0 Flash") -> dict:
     texts = {}
 
-    # dir_path = os.path.realpath(__file__)   # User/username/..../RootFolder/src/data/make_dataset.py
-    # dir_path = dir_path.rsplit("/", 3)  # ["User/..../RootFolder", "src", "data", "make_dataset.py"]
-    # dir_path = dir_path[0] + "/data/raw/llm_ss"
-    dir_path = _pt.get_target_dir("data/raw/llm_ss")
+    dir_path = _pt.get_target_dir("data/raw/llm_ss")/ai
 
     if file == "all":
         titles = [
-            f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))
+            title for title in os.listdir(dir_path)
         ]
     else:
         titles = file
@@ -28,7 +25,7 @@ def format_llm_ss(file:list="all") -> dict:
     }
 
     for title in titles:
-        path = os.path.join(dir_path, title)
+        path = dir_path/f"{title}/story.txt"
         with open(path, 'r') as f:
             textlines = f.readlines()
 
@@ -38,14 +35,15 @@ def format_llm_ss(file:list="all") -> dict:
         # initialize the dict
         texts[title] = ""
         for line in textlines:
-            # if the line is just a newline command, remove it from the text
-            if line == '\n':
+            
+            conditions = [
+                line == '\n',
+                re.search("---", line),
+                re.search("##", line),
+                #re.search(r"<c\d+>", line),
+            ]
+            if True in conditions:
                 continue
-
-            if re.search("---", line):
-                continue
-            # elif re.search(r"<c\d+>", line):
-            #     continue
 
             # replace specified signs with a corresponding str
             if not re.search(r"<c\d+>", line):
