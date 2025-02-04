@@ -13,7 +13,7 @@ def format_llm_ss(file:list="all", ai="Gemini 2.0 Flash") -> dict:
 
     if file == "all":
         titles = [
-            title for title in os.listdir(dir_path)
+            title for title in os.listdir(dir_path) if os.path.isdir(title)
         ]
     else:
         titles = file

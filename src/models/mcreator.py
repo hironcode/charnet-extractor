@@ -39,7 +39,7 @@ def create_spacy_model(
     Token.set_extension("paragraph_id", default=None, force=True)
 
     # add custom pipeline component to segment paragraphs
-    @Language.component("paragraph_segmenter")
+    @Language.factory("paragraph_segmenter")
     def paragraph_segmenter(doc):
         """
         Custom pipeline component to segment paragraphs in a Doc object.
@@ -53,7 +53,7 @@ def create_spacy_model(
                 id += 1
         return doc
 
-    @Language.component("custom_sentence_boundaries_quote")
+    @Language.factory("custom_sentence_boundaries_quote")
     def custom_sentence_boundaries(doc):
         in_quote = False
         for token in doc:
@@ -65,7 +65,7 @@ def create_spacy_model(
                 token.is_sent_start = False
         return doc
 
-    @Language.component("custom_sentence_boundaries_linebreak")
+    @Language.factory("custom_sentence_boundaries_linebreak")
     def custom_sentence_boundaries_linebreak(doc):
         for token in doc:
             if token.text.count("\n") >= 1:
