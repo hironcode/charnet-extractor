@@ -164,8 +164,8 @@ class CharacterIdentification:
             # if the two of the elements are FEMALE and MALE or all undefined
             else:
                 chars.update_gender(id, gender_p)
-        print(f"_annotate_gender_final:"
-              f"{[f"{char.name}: {char.gender}" for char in chars.get_all_characters()]}")
+        print(f"_annotate_gender_final:",
+              [char.name + ":" + char.gender for char in chars.get_all_characters()])
         return chars
 
     def _gender_matches(self, gender1, gender2):
