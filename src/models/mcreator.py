@@ -39,44 +39,44 @@ def create_spacy_model(
     Token.set_extension("paragraph_id", default=None, force=True)
 
     # add custom pipeline component to segment paragraphs
-    @Language.factory("paragraph_segmenter")
-    def paragraph_segmenter(doc):
-        """
-        Custom pipeline component to segment paragraphs in a Doc object.
-        """
+    # @Language.factory("paragraph_segmenter")
+    # def paragraph_segmenter(doc):
+    #     """
+    #     Custom pipeline component to segment paragraphs in a Doc object.
+    #     """
 
-        id = 0
-        # Using two newlines as a simple paragraph delimiter
-        for i, token in enumerate(doc):
-            doc[i]._.paragraph_id = id
-            if token.text.count("\n") >= 1 and i > 0:
-                id += 1
-        return doc
+    #     id = 0
+    #     # Using two newlines as a simple paragraph delimiter
+    #     for i, token in enumerate(doc):
+    #         doc[i]._.paragraph_id = id
+    #         if token.text.count("\n") >= 1 and i > 0:
+    #             id += 1
+    #     return doc
 
-    @Language.factory("custom_sentence_boundaries_quote")
-    def custom_sentence_boundaries(doc):
-        in_quote = False
-        for token in doc:
-            if token.is_quote:
-                in_quote = not in_quote  # Toggle in_quote status on encountering a quote
-                token.is_sent_start = False  # Prevent a sentence from starting from a quote
-            elif in_quote:
-                # Inside a quote, do not start a new sentence
-                token.is_sent_start = False
-        return doc
+    # @Language.factory("custom_sentence_boundaries_quote")
+    # def custom_sentence_boundaries(doc):
+    #     in_quote = False
+    #     for token in doc:
+    #         if token.is_quote:
+    #             in_quote = not in_quote  # Toggle in_quote status on encountering a quote
+    #             token.is_sent_start = False  # Prevent a sentence from starting from a quote
+    #         elif in_quote:
+    #             # Inside a quote, do not start a new sentence
+    #             token.is_sent_start = False
+    #     return doc
 
-    @Language.factory("custom_sentence_boundaries_linebreak")
-    def custom_sentence_boundaries_linebreak(doc):
-        for token in doc:
-            if token.text.count("\n") >= 1:
-                token.is_sent_start = True
-        return doc
+    # @Language.factory("custom_sentence_boundaries_linebreak")
+    # def custom_sentence_boundaries_linebreak(doc):
+    #     for token in doc:
+    #         if token.text.count("\n") >= 1:
+    #             token.is_sent_start = True
+    #     return doc
 
     nlp = spacy.load(model)
 
-    nlp.add_pipe("paragraph_segmenter")
-    nlp.add_pipe("custom_sentence_boundaries_quote", before="parser")
-    nlp.add_pipe("custom_sentence_boundaries_linebreak", before="parser")
+    # nlp.add_pipe("paragraph_segmenter")
+    # nlp.add_pipe("custom_sentence_boundaries_quote", before="parser")
+    # nlp.add_pipe("custom_sentence_boundaries_linebreak", before="parser")
 
     # add special cases for every chapter markers enclosed in square brackets: like [c1]
     # this is to prevent the model from splitting the chapter markers into separate tokens
