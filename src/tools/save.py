@@ -17,7 +17,8 @@ def save_graph(graph: CharNet, format:str="gexf", comment:str='', path: str="") 
     if format == "adjlist":
         nx.write_adjlist(graph, path, comments=comment)
     elif format ==  "gexf":
-        nx.write_gexf(graph, path, comment=comment)
+        print(f"gexf file doesn't support comments", end='\r')
+        nx.write_gexf(graph, path)
 
 def show_graph(graph: CharNet, pos, label:str, label_map:Dict=None, graph_type="polarity", path_to_save: str=None) -> None:
     """

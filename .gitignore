@@ -24,3 +24,4 @@ _notes
 /notebooks/
 src/models/test.py
 .props
+ai_api/
