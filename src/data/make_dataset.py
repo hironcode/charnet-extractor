@@ -9,7 +9,7 @@ import re
 def format_llm_ss(file:list="all", ai="Gemini 2.0 Flash") -> dict:
     texts = {}
 
-    dir_path = _pt.get_target_dir("data/raw/llm_ss")/ai
+    dir_path = _pt.get_target_dir("data/ss/llm_ss")/ai
 
     if file == "all":
         titles = [

@@ -25,3 +25,4 @@ _notes
 src/models/test.py
 .props
 ai_api/
+story/

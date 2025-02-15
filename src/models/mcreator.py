@@ -105,7 +105,7 @@ def create_spacy_model(
             mbank.save_model(model_path, doc)
             msg.info("Created a new model. Pickled model is saved.\n")
         else:
-            msg.info("Created a new model. Pickled model is not saved.\n")
+            msg.info("Did't create a new model. Pickled model is not saved.\n")
 
     return nlp, doc
 
