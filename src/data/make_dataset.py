@@ -6,14 +6,17 @@ from src.tools.path_tools import PathTools
 _pt = PathTools()
 import re
 
-def format_llm_ss(file:list="all", ai="Gemini 2.0 Flash") -> dict:
-    texts = {}
+def format_ss(dir_path, file:list="all") -> dict:
+    """
+    :param dir_path: path to the parent directory containing the story folders (i.e. "data/ss/llm_ss/Gemini 2.0 Flash")
 
-    dir_path = _pt.get_target_dir("data/ss/llm_ss")/ai
+    """
+
+    texts = {}
 
     if file == "all":
         titles = [
-            title for title in os.listdir(dir_path) if os.path.isdir(title)
+            title for title in os.listdir(dir_path) if os.path.isdir(dir_path/title)
         ]
     else:
         titles = file
@@ -25,7 +28,7 @@ def format_llm_ss(file:list="all", ai="Gemini 2.0 Flash") -> dict:
     }
 
     for title in titles:
-        path = dir_path/f"{title}/story.txt"
+        path = dir_path/title/"story.txt"
         with open(path, 'r') as f:
             textlines = f.readlines()
 
