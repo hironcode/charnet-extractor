@@ -85,13 +85,11 @@ class CharacterIdentification:
                 # print("===============================================")
                 name = ent.text
 
-                title = None
                 # identify a title if the name has one
                 if ent.start - 1 >= 0:
                     title = self.doc[ent.start - 1].text
-
-                if title.replace(".", "") in titles:
-                    name = f"{title} {name}"
+                    if title.replace(".", "") in titles:
+                        name = f"{title} {name}"
 
                 # create a dictionary index if the name does not exist in the dict yet
                 # the name might have a title

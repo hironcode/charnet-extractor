@@ -15,6 +15,7 @@ class CharNet(nx.Graph):
                  chars: AllCharacters,
                  narrative_units: NarrativeUnits,
                  id2label: Dict[int, str]=None,
+                 oldid2newid: Dict[int, int]=None,
                  ) -> None:
         """
         :param occurrences: a list of different references to the same characters
@@ -31,6 +32,7 @@ class CharNet(nx.Graph):
         self._charname_id = {char.id: char.name for char in chars.get_all_characters()}
         self.narrative_units = narrative_units
         self.id2label = id2label
+        self.oldid2newid = {id: id for id in self.id2label.keys()} if oldid2newid is None else oldid2newid
         self.collapsed = {}
 
         self.update_nodes_from_metachars()
@@ -104,9 +106,9 @@ class CharNet(nx.Graph):
                 if i != j and adj_matrix[i, j] != -100:
                     value = adj_matrix[i, j]
                     if self.id2label is None:
-                        self.add_edge(i, j, polarity=value)
+                        self.add_edge(i, j, polarity=self.oldid2newid[value])
                     else:
-                        self.add_edge(i, j, polarity=value, label=self.id2label[value])
+                        self.add_edge(i, j, polarity=self.oldid2newid[value], label=self.id2label[self.oldid2newid[value]])
 
         # label info
         # if "finiteautomata/bertweet-base-sentiment-analysis", ["POSITIVE", "NEGATIVE", "NEUTRAL"]
