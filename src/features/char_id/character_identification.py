@@ -42,21 +42,24 @@ class CharacterIdentification:
         self.nlp = nlp
         self.doc = doc
 
-    def run(self) -> Tuple[dict[str: Character], list[list]]:
+    def run(self, verbose:bool=False) -> Tuple[dict[str: Character], list[list]]:
         """
         :return: a dictionary of character names (keys) and Character classes (values) and a list of co-occurrences
         """
         self.chars = self.detect_characters(self.chars)
-        msg.good("Character Detection is done\n")
-        msg.good("="*50)
+        if verbose:
+            msg.good("Character Detection is done\n")
+            msg.good("="*50)
 
-        self.chars = self.annotate_gender(self.chars)
-        msg.good("Gender Annotation is done\n")
-        msg.good("=" * 50)
+        self.chars = self.annotate_gender(self.chars, verbose=verbose)
+        if verbose:
+            msg.good("Gender Annotation is done\n")
+            msg.good("=" * 50)
 
         self.chars, self.occurrences = self.unify_occurrences(self.chars)
-        msg.good("Occurrence Unification is done\n")
-        msg.good("=" * 50)
+        if verbose:
+            msg.good("Occurrence Unification is done\n")
+            msg.good("=" * 50)
 
         # self.chars = self.assign_id(self.chars, self.occurrences)
         # msg.good("ID Assignment is done\n")
@@ -77,12 +80,6 @@ class CharacterIdentification:
             if ent.label_ == "PERSON":
                 # in the set, we have {name: (gender, [**index])}
                 # ent is spacy.tokens.span.Span and has start attribute (index of the span in the doc)
-
-                # print(f"ent.text: {ent.text}")
-                # print(f"ent.label_: {ent.label_}")
-                # print(f"ent.start: {ent.start}")
-                # print(f"self.doc[ent.start-10:ent.start+10]: {self.doc[ent.start]}")
-                # print("===============================================")
                 name = ent.text
 
                 # identify a title if the name has one
@@ -101,7 +98,7 @@ class CharacterIdentification:
                 chars.append_occurence(id, ent.start)
         return chars
 
-    def annotate_gender(self, chars: AllCharacters) -> AllCharacters:
+    def annotate_gender(self, chars: AllCharacters, verbose=False) -> AllCharacters:
         """
         (2) automatically anotate a gender to each entity based on:\n
             (a) lists of male first names and female first names\n
@@ -123,19 +120,22 @@ class CharacterIdentification:
         ga = GenderAnnotation(self.nlp, self.doc, chars.chars)
 
         name_genders_title = ga.annotate_gender_by_titles_simple()
-        print(f"_annotate_gender_by_titles_simple: "
-              f"{name_genders_title}")
+        if verbose:
+            print(f"_annotate_gender_by_titles_simple: "
+                  f"{name_genders_title}")
 
         name_genders_name = ga.annotate_gender_by_names()
-        print(f"_annotate_gender_by_names:"
-              f"{name_genders_name}")
+        if verbose:
+            print(f"_annotate_gender_by_names:"
+                  f"{name_genders_name}")
         
         # Dec/30/2024 - pronoun approach is quite unstable. We deprecate this for now.
         msg.warn("Dec/30/2024 - Pronoun approach is quite unstable. We deprecate this for now.")
         # name_genders_pronoun = ga.annotate_gender_by_pronouns()
         name_genders_pronoun = {name: "UNKNOWN" for name in chars.get_names()}
-        print(f"_annotate_gender_by_pronouns:"
-              f"{name_genders_pronoun}")
+        if verbose:
+            print(f"_annotate_gender_by_pronouns:"
+                  f"{name_genders_pronoun}")
 
         for name in chars.get_names():
             gender_t = name_genders_title[name]
@@ -162,8 +162,11 @@ class CharacterIdentification:
             # if the two of the elements are FEMALE and MALE or all undefined
             else:
                 chars.update_gender(id, gender_p)
-        print(f"_annotate_gender_final:",
-              [char.name + ":" + char.gender for char in chars.get_all_characters()])
+
+        if verbose:
+            print(f"_annotate_gender_final:",
+                  [char.name + ":" + char.gender for char in chars.get_all_characters()])
+            
         return chars
 
     def _gender_matches(self, gender1, gender2):
