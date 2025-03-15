@@ -6,7 +6,7 @@ from src.tools.path_tools import PathTools
 _pt = PathTools()
 import re
 
-def format_ss(dir_path, file:list="all") -> dict:
+def format_ss(dir_path, file="all") -> dict:
     """
     :param dir_path: path to the parent directory containing the story folders (i.e. "data/ss/llm_ss/Gemini 2.0 Flash")
 
