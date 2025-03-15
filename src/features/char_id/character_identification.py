@@ -130,7 +130,7 @@ class CharacterIdentification:
                   f"{name_genders_name}")
         
         # Dec/30/2024 - pronoun approach is quite unstable. We deprecate this for now.
-        msg.warn("Dec/30/2024 - Pronoun approach is quite unstable. We deprecate this for now.")
+        # msg.warn("Dec/30/2024 - Pronoun approach is quite unstable. We deprecate this for now.")
         # name_genders_pronoun = ga.annotate_gender_by_pronouns()
         name_genders_pronoun = {name: "UNKNOWN" for name in chars.get_names()}
         if verbose:

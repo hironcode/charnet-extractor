@@ -25,6 +25,8 @@ def format_ss(dir_path, file="all") -> dict:
     signs = {
         # "\n": " ",
         "\t": "",
+        "*": "",
+        "#": "",
     }
 
     for title in titles:
