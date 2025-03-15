@@ -125,8 +125,6 @@ class CharNet(nx.Graph):
         for k,v in nodes_to_collapse.items():
             for i in range(len(edges)):
                 n1, n2, data = edges[i]
-                print('=====')
-                print(f"data before: {n1} {n2} {data}")
                 
                 if n1 in v:
                     n1 = k
@@ -136,7 +134,6 @@ class CharNet(nx.Graph):
                     to_delte.append(i)
                 else:
                     edges[i] = (n1, n2, data)
-                print(f"data after: {n1} {n2} {data}")
             # save information of the collapsed nodes
             prior_v = self.collapsed.get(k, [])
             self.collapsed[k] = list(set(prior_v + v))
@@ -158,7 +155,6 @@ def merge_charnet_occurences(graph: CharNet) -> nx.Graph:
     idxs = list()
     for i in range(occurences.shape[0]):
         idx = sorted(list(np.where(occurences[i]==1)[0]))
-        print(idx)
         idxs.append(idx) if idx not in idxs else None
     # idxs = [list(map(int, mulidx)) for mulidx in zip(*idxs)]
     for same_char_ids in idxs:

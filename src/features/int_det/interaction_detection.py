@@ -200,14 +200,12 @@ class InteractionDetection:
         """
         self.sa_tokenizer = AutoTokenizer.from_pretrained(model_name, max_length=max_length)
         self.sa_model = AutoModelForSequenceClassification.from_pretrained(model_name, max_length=max_length)        
-        print(f"max pos embeds: {self.sa_model.config.max_position_embeddings}")
         # self.sa_model.config.max_position_embeddings = max_length
         self.sa_model.eval()
         device = "cpu"
         if torch.cuda.is_available():
             device="cuda"
             self.sa_model.to(device)
-        print(f"Is model on GPU?: {next(self.sa_model.parameters()).is_cuda}")
 
 
         for i in range(len(narrative_units)):
