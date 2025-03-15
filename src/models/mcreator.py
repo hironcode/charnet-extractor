@@ -14,6 +14,7 @@ def create_spacy_model(
         model="en_core_web_trf",
         save_model: bool = False,
         call_old_model: bool = False,
+        verbose=False,
     ):
     """
     Create a spacy model and return it
@@ -94,17 +95,19 @@ def create_spacy_model(
 
     if mbank.exists(model_path) and call_old_model is True:
         doc = mbank.get_model(model_path)
-        msg.info('Pickled model exists. Copied the model.\n')
-        if save_model is True:
+        if verbose:
+            msg.info('Pickled model exists. Copied the model.\n')
+        if save_model is True and verbose:
             msg.info("Pickled model do not need to be saved.\n")
     else:
-        if call_old_model is True:
+        if call_old_model is True and verbose:
             msg.info("Pickled model don't exist. Couldn't copy a model.\n")
         doc = nlp(text)
         if save_model is True:
             mbank.save_model(model_path, doc)
-            msg.info("Created a new model. Pickled model is saved.\n")
-        else:
+            if verbose:
+                msg.info("Created a new model. Pickled model is saved.\n")
+        elif verbose:
             msg.info("Did't create a new model. Pickled model is not saved.\n")
 
     return nlp, doc

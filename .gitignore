@@ -26,3 +26,5 @@ src/models/test.py
 .props
 ai_api/
 story/
+main.py
+reports/
