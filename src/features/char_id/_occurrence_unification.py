@@ -68,9 +68,10 @@ class OccurrenceUnification:
                 continue
             initial = first.upper()[0]
             # if the name is in the name list at the "initial" index
-            if first in self.hypocorisms[initial].keys():
+            if initial in self.hypocorisms.keys() and first in self.hypocorisms[initial].keys():
                 # add the list of referents to the self.char_referents list
                 char_referents[name] = self.hypocorisms[initial][first]
+    
         return char_referents
 
     def unify_by_similarity(self):
