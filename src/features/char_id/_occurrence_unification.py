@@ -171,9 +171,13 @@ class OccurrenceUnification:
         possible["first last"] = f"{first} {last}"
         possible["first"] = first
         possible["last"] = last
-        for nickname in self.hypocorisms[initial][first]:
-            possible['nickname last'].append(f"{nickname} {last}")
 
-        return possible
+        if initial not in self.hypocorisms.keys() or first not in self.hypocorisms[initial].keys():
+            return possible
+        else:
+            for nickname in self.hypocorisms[initial][first]:
+                possible['nickname last'].append(f"{nickname} {last}")
+
+            return possible
 
 

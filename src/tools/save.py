@@ -19,32 +19,3 @@ def save_graph(graph: CharNet, format:str="gexf", comment:str='', path: str="") 
     elif format ==  "gexf":
         # print(f"gexf file doesn't support comments", end='\r')
         nx.write_gexf(graph, path)
-
-def show_graph(graph: CharNet, pos, label:str, label_map:Dict=None, graph_type="polarity", path_to_save: str=None, node_size=1000, font_size=12) -> None:
-    """
-    Save a graph as an image
-    :param graph: graph to save
-    :param pos: layout of the graph
-    :param label: edge label to show on the graph
-    :param label_map: dictionary mapping the node id to the node label i.e. {1: "Alice", 2: "Bob"}
-    :param graph_type: type of the graph
-    :param path_to_save: path to save the graph
-    """
-    nx.draw(graph, pos, labels=label_map, with_labels=True, node_size=node_size, node_color="skyblue", font_size=font_size)
-    edge_labels:dict = nx.get_edge_attributes(graph, label)
-    if graph_type in ["polarity"]:
-        # get the first letter of the edge labels: i.e. "positive" -> "p" except for "neutral" -> "neu"
-        for k, v in edge_labels.items():
-            if 'neutral' in v:
-                edge_labels[k] = 'neu'
-            else:
-                edge_labels[k] = v[0]
-    nx.draw_networkx_edge_labels(graph, pos, edge_labels=edge_labels, font_color='red')
-    plt.title(f'{graph_type} graph for "{graph.narrative_units.title}"')
-
-    if path_to_save:
-        plt.savefig(path_to_save)
-        # print(f"Graph image saved at {path_to_save}")
-
-    plt.show()
-

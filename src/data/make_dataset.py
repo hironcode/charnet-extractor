@@ -39,7 +39,7 @@ def format_ss(dir_path, file="all") -> dict:
 
         # initialize the dict
         texts[title] = ""
-        for line in textlines:
+        for i, line in enumerate(textlines):
             
             conditions = [
                 line == '\n',
@@ -47,7 +47,12 @@ def format_ss(dir_path, file="all") -> dict:
                 re.search("##", line),
                 #re.search(r"<c\d+>", line),
             ]
+
             if True in conditions:
+                continue
+            
+            # remove the title line of LLM stories
+            if "llm_ss" in str(dir_path) and i == 0:
                 continue
 
             # replace specified signs with a corresponding str

@@ -29,13 +29,13 @@ def degree_distribution(G: nx.Graph, weight=None):
         degree_count[degree] += 1
     return degree_count
 
-def subgraph(G, label=None):
+def subgraph(G, key: str,value=None):
     """Extract a subgraph from a graph based on the label value."""
-    if label is None:
+    if value is None:
         return G
     subgraph = nx.Graph()
     for u, v, data in G.edges(data=True):
-        if data.get('label') == label:
+        if data.get(key) == value:
             subgraph.add_edge(u, v, **data)
     return subgraph
 
@@ -44,13 +44,15 @@ def average_degree(G, weight=None):
     degree_sequence = [d for n, d in G.degree(weight=weight)]
     return sum(degree_sequence) / (len(degree_sequence)*(len(degree_sequence) - 1)) if len(degree_sequence) > 1 else len(degree_sequence)  # avoid division by zero
 
-def robustness_smalldegree_neglogcomp(G:nx.Graph, logpath):
+def robustness_smalldegree_neglogcomp(G:nx.Graph, logpath, is_drawing=False):
     """Calculate the robustness of a graph based on certain deletion rule and connectedness measure."""
-    os.makedirs(logpath, exist_ok=True)
     result = {}
     step = 0
+    G = G.copy()
 
-    # draw(G, os.path.join(logpath, f"graph_{step}.png"))
+    if is_drawing:
+        os.makedirs(logpath, exist_ok=True)
+        draw(G, os.path.join(logpath, f"graph_{step}.png"))
 
     result[step] = negativelog(nx.number_connected_components(G))
     n_nodes = G.number_of_nodes()
@@ -61,7 +63,7 @@ def robustness_smalldegree_neglogcomp(G:nx.Graph, logpath):
     step += 1
     while G.number_of_nodes() > 0:
         # delete the node with the smallest degree
-        min_degree_node = min(G.degree, key=lambda x: x[1])[0]
+        min_degree_node = max(G.degree, key=lambda x: x[1])[0]
         G.remove_node(min_degree_node)
         # check if the graph is still connected
         if nx.number_connected_components(G) == 0:
@@ -72,14 +74,22 @@ def robustness_smalldegree_neglogcomp(G:nx.Graph, logpath):
             # but negativelog function returns 0 for negative values just in case
             result[step] = giant_component_size(G) / init_gc_size
 
-        # draw(G, os.path.join(logpath, f"graph_{step}.png"))
+        if is_drawing:
+            draw(G, os.path.join(logpath, f"graph_{step}.png"))
 
         step += 1
 
     return result
+
+
+def calc(metric, *args, **kwargs):
+    try:
+        return metric(*args, **kwargs)
+    except:
+        return None
         
 
-def analyze(filepath, logpath, filetype="gexf"):
+def analyze(filepath, logpath, filetype="gexf", density_threshold=0.2):
     """
     Analyze a graph and return the result in a dictionary.
     Parameters
@@ -122,11 +132,11 @@ def analyze(filepath, logpath, filetype="gexf"):
     result['original'] = {}
 
     # network level
+    result['original']['density'] = nx.density(G)
     result['original']['average_degree'] = average_degree(G, weight=None)
     result['original']['weighted_average_degree'] = average_degree(G, weight='polarity')
-    result['original']['density'] = nx.density(G)
-    result['original']['average_clustering'] = nx.average_clustering(G, weight=None)
-    result['original']['assortativity_coefficient'] = nx.degree_pearson_correlation_coefficient(G, weight="polarity")  
+    result['original']['average_clustering'] = calc(nx.average_clustering, G, weight=None)
+    result['original']['assortativity_coefficient'] = calc(nx.degree_pearson_correlation_coefficient, G, weight="polarity")
     # pearson correlation coefficient is the same as assortativity coefficient but potentially speeds up the calculation
     # https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.assortativity.degree_pearson_correlation_coefficient.html#networkx.algorithms.assortativity.degree_pearson_correlation_coefficient
 
@@ -137,12 +147,12 @@ def analyze(filepath, logpath, filetype="gexf"):
     result['original']['degree_distribution'] = degree_distribution(G, weight=None)
 
     ### positive subgraph ###
-    PG = subgraph(G, label='POSITIVE')
+    PG = subgraph(G, "label", value='POSITIVE')
     result['positive'] = {}
     # network level
     result['positive']['average_degree'] = average_degree(PG, weight=None)
     result['positive']['density'] = nx.density(PG)
-    result['positive']['average_clustering'] = nx.average_clustering(PG, weight=None)
+    result['positive']['average_clustering'] = calc(nx.average_clustering, PG, weight=None)
     result['positive']['robustness'] = robustness_smalldegree_neglogcomp(PG, logpath/"pos")
 
     # node level centrality
@@ -153,11 +163,11 @@ def analyze(filepath, logpath, filetype="gexf"):
 
     ### negative subgraph ###
     result['negative'] = {}
-    NG = subgraph(G, label='NEGATIVE')
+    NG = subgraph(G, "label", value='NEGATIVE')
     # network level
     result['negative']['average_degree'] = average_degree(NG, weight=None)
     result['negative']['density'] = nx.density(NG)
-    result['negative']['average_clustering'] = nx.average_clustering(NG, weight=None)
+    result['negative']['average_clustering'] = calc(nx.average_clustering, NG, weight=None)
     result['negative']['robustness'] = robustness_smalldegree_neglogcomp(NG, logpath/"neg")
 
     # node level centrality
@@ -184,22 +194,5 @@ def analyze(filepath, logpath, filetype="gexf"):
     # # save the negative subgraph to a gexf file
     # nx.write_adjlist(NG, os.path.join(logpath, f"{title}_negative.adjlist"))
     # nx.write_gexf(NG, os.path.join(logpath, f"{title}_negative.gexf"))
-
     return result, G, PG, NG
-
-if __name__ == "__main__":
-    pt = PathTools()
-    PATH = pt.get_target_dir("data/networks/llm_ss")
-    title = "Echoes of the Singularity_4.gexf"
-    result, G = analyze(PATH/title, logpath=None, filetype="gexf")
-    G: nx.Graph
-
-    print(result)
-    print(G.edges)
-    
-    
-
-    
-    
-    
     
